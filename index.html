@@ -89,11 +89,9 @@
 
   .show-meta { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
   .show-title { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; margin-bottom: 2px; }
-  .show-title.strike { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--magenta); }
 
   .venue-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); text-decoration: none; border-bottom: 1px dashed var(--border-2); padding-bottom: 1px; transition: all 0.15s; }
   .venue-link:hover { color: var(--cyan); border-bottom-color: var(--cyan); border-bottom-style: solid; }
-  .venue-link.strike { text-decoration: line-through; }
 
   .going-stat { text-align: right; flex-shrink: 0; }
   .going-stat-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; }
@@ -309,7 +307,7 @@ function App() {
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
-  const [filter, setFilter] = useState({ year: 'all', status: 'all', search: '' });
+  const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
 
@@ -619,13 +617,13 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
             h('div', { className: 'show-meta', style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } },
-              h('span', { style: show.past ? { textDecoration: 'line-through' } : null }, formatDate(show.date)),
+              h('span', null, formatDate(show.date)),
               h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
             ),
-            h('div', { className: 'show-title' + (show.past ? ' strike' : '') }, show.artist),
+            h('div', { className: 'show-title' }, show.artist),
             show.venue && h('a', {
-              className: 'venue-link' + (show.past ? ' strike' : ''),
+              className: 'venue-link',
               href: mapsUrl(show.venue), target: '_blank', rel: 'noopener'
             },
               h('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
@@ -886,7 +884,7 @@ function FriendRow({ show, friendId }) {
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : '') },
     h(ArtistPhoto, { artist: show.artist, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
     h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontWeight: 500, fontSize: 14, textDecoration: show.past ? 'line-through' : 'none' } }, show.artist),
+      h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
       h('div', { style: { fontSize: 11, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
         (show.venue || 'TBD') + ' · ' + formatDate(show.date)
       )
