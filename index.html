@@ -1122,10 +1122,11 @@ function ProfileModal({ friend, onClose, onSave }) {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      // previewUrl is already base64 (set during file selection) — safe to store in DB
-      let finalAvatarUrl = previewUrl || null;
+      let finalAvatarUrl = friend?.avatar_url || null; // default: keep existing
       if (file) {
-        // Try Supabase Storage for a CDN URL; fall back to base64 already in previewUrl
+        // Convert to base64 now (guaranteed portable, no race condition)
+        try { finalAvatarUrl = await resizeToDataUrl(file); } catch {}
+        // Try Supabase Storage for a CDN URL instead
         try {
           const ext = file.name.split('.').pop() || 'jpg';
           const { data: up, error: upErr } = await sb.storage.from('avatars').upload(`${Date.now()}.${ext}`, file, { upsert: true });
@@ -1133,7 +1134,9 @@ function ProfileModal({ friend, onClose, onSave }) {
             const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
             finalAvatarUrl = pub.publicUrl;
           }
-        } catch { /* storage not available — base64 fallback already set */ }
+        } catch {}
+      } else {
+        finalAvatarUrl = previewUrl || null;
       }
       await onSave({ id: friend?.id, name: name.trim(), avatar_url: finalAvatarUrl, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
     } finally {
@@ -1155,15 +1158,9 @@ function ProfileModal({ friend, onClose, onSave }) {
           h('input', {
             ref: fileInputRef, type: 'file', accept: 'image/*',
             style: { display: 'none' },
-            onChange: async (e) => {
+            onChange: (e) => {
               const f = e.target.files?.[0];
-              if (!f) return;
-              setFile(f);
-              setPreviewUrl(URL.createObjectURL(f)); // instant preview
-              try {
-                const b64 = await resizeToDataUrl(f);
-                setPreviewUrl(b64); // replace blob with portable base64
-              } catch {}
+              if (f) { setFile(f); setPreviewUrl(URL.createObjectURL(f)); }
             }
           }),
           h('button', {
