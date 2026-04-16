@@ -753,12 +753,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   // Fetch artist image via serverless proxy if not yet cached in DB
   useEffect(() => {
-    if (show.artist_image_url !== null && show.artist_image_url !== undefined) {
-      if (show.artist_image_url && artistSpotifyUrlCache) {
-        // no-op — image already in DB
-      }
-      return;
-    }
+    if (show.artist_image_url) return; // real URL already cached — skip
     const clean = cleanArtistName(show.artist);
     if (!clean || artistImageAttempted.has(clean)) return;
     artistImageAttempted.add(clean);
@@ -766,9 +761,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       .then(r => r.json())
       .then(data => {
         if (data.spotifyUrl) artistSpotifyUrlCache.set(show.artist, data.spotifyUrl);
-        onArtistImageFetched(show.id, data.imageUrl || '');
+        if (data.imageUrl) onArtistImageFetched(show.id, data.imageUrl);
+        // no-op on null — don't write empty string to DB so we can retry next session
       })
-      .catch(() => onArtistImageFetched(show.id, ''));
+      .catch(() => {}); // silent fail — retry next session
   }, [show.id, show.artist_image_url]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
