@@ -358,13 +358,13 @@ async function getSpotifyToken() {
   if (tokenFetchPromise) return tokenFetchPromise;
   tokenFetchPromise = (async () => {
     try {
+      // Send credentials in the body (no Authorization header) so the browser
+      // sends a simple CORS request instead of triggering a preflight OPTIONS.
+      // Spotify explicitly supports client_id + client_secret in the POST body.
       const res = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
-        },
-        body: 'grant_type=client_credentials',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=client_credentials&client_id=${SPOTIFY_CLIENT_ID}&client_secret=${SPOTIFY_CLIENT_SECRET}`,
       });
       if (!res.ok) return null;
       const data = await res.json();
