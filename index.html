@@ -760,6 +760,15 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
+  const [eventImgUrl, setEventImgUrl] = useState(null);
+  useEffect(() => {
+    if (!show.crowdvolt_url) return;
+    fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
+      .then(r => r.json())
+      .then(d => { if (d.imageUrl) setEventImgUrl(d.imageUrl); })
+      .catch(() => {});
+  }, [show.crowdvolt_url]);
+
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
   const myTicket = currentUser && show.tickets.find((t) => t.friend_id === currentUser.id && t.count > 0);
@@ -775,7 +784,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo' }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl || show.artist_image_url || null, className: 'artist-photo' }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
