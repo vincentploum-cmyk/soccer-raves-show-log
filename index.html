@@ -622,8 +622,8 @@ function App() {
     }),
     // Tabs
     h('div', { className: 'tabs' },
-      h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'Shows'),
-      h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'Per-friend'),
+      h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'All shows'),
+      h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'My tickets'),
     ),
     // Content
     tab === 'shows' && h(ShowsView, {
