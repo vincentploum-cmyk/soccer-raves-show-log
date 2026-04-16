@@ -601,13 +601,24 @@ function App() {
 
   // Mutations
   const saveFriendProfile = async ({ id, name, avatar_url, genres, fav_artist }) => {
+    const fullFields = { name, avatar_url, genres, fav_artist };
+    const baseFields = { name };
+    const tryUpsert = async (fields) => {
+      if (id) {
+        return sb.from('friends').update(fields).eq('id', id);
+      } else {
+        return sb.from('friends').insert(fields).select().single();
+      }
+    };
+    let { data, error } = await tryUpsert(fullFields);
+    if (error && error.message?.includes('column')) {
+      // New columns not yet migrated — retry with just name
+      ({ data, error } = await tryUpsert(baseFields));
+    }
+    if (error) { showToast('Error: ' + error.message); return; }
     if (id) {
-      const { error } = await sb.from('friends').update({ name, avatar_url, genres, fav_artist }).eq('id', id);
-      if (error) { showToast('Error: ' + error.message); return; }
       showToast('Profile saved');
     } else {
-      const { data, error } = await sb.from('friends').insert({ name, avatar_url, genres, fav_artist }).select().single();
-      if (error) { showToast('Error: ' + error.message); return; }
       showToast('Profile created!');
       if (data) { localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend'); }
     }
@@ -1079,18 +1090,24 @@ function ProfileModal({ friend, onClose, onSave }) {
   const submit = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    let finalAvatarUrl = previewUrl;
-    if (file) {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${Date.now()}.${ext}`;
-      const { data: up } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
-      if (up) {
-        const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
-        finalAvatarUrl = pub.publicUrl;
+    try {
+      let finalAvatarUrl = previewUrl || null;
+      if (file) {
+        try {
+          const ext = file.name.split('.').pop() || 'jpg';
+          const path = `${Date.now()}.${ext}`;
+          const { data: up, error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+          if (upErr) { console.warn('Photo upload failed:', upErr.message); }
+          else if (up) {
+            const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
+            finalAvatarUrl = pub.publicUrl;
+          }
+        } catch (e) { console.warn('Photo upload error:', e); }
       }
+      await onSave({ id: friend?.id, name: name.trim(), avatar_url: finalAvatarUrl, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
+    } finally {
+      setSaving(false);
     }
-    await onSave({ id: friend?.id, name: name.trim(), avatar_url: finalAvatarUrl || null, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
-    setSaving(false);
   };
 
   const fileInputRef = useRef(null);
