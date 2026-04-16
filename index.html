@@ -255,6 +255,22 @@
   .profile-card-meta { font-size: 12px; color: #666; margin-top: 4px; }
   .profile-genres { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
   .genre-chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,0.06); color: #444; font-weight: 500; }
+
+  /* Friend roster */
+  .friends-roster { display: flex; gap: 14px; overflow-x: auto; padding: 14px 0 6px; scrollbar-width: none; }
+  .friends-roster::-webkit-scrollbar { display: none; }
+  .roster-chip { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; background: none; border: none; padding: 0; }
+  .roster-chip-name { font-size: 10px; color: #999; font-family: 'JetBrains Mono', monospace; max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .roster-chip.active .roster-chip-name { color: #0F0F0F; font-weight: 600; }
+  .roster-chip-ring { border-radius: 50%; outline: 2.5px solid transparent; outline-offset: 2px; transition: outline-color 0.15s; display: inline-flex; }
+  .roster-chip.active .roster-chip-ring { outline-color: #B5FF5A; }
+
+  /* Profile preview */
+  .profile-preview { background: #fff; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04); display: flex; align-items: flex-start; gap: 14px; animation: fadeIn 0.15s; }
+
+  /* Get tickets button */
+  .get-tickets-btn { display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.06); color: #0F0F0F; font-weight: 600; font-size: 11px; padding: 5px 11px; border-radius: 999px; white-space: nowrap; text-decoration: none; transition: background 0.15s; font-family: 'Space Grotesk', sans-serif; }
+  .get-tickets-btn:hover { background: rgba(0,0,0,0.11); }
 </style>
 </head>
 <body>
@@ -332,6 +348,7 @@ const artistImageCache = new Map();
 const artistSpotifyUrlCache = new Map();
 const artistIdCache = new Map();
 const concertUrlCache = new Map();
+const artistFetchPromise = new Map(); // dedup concurrent requests
 let spotifyToken = null;
 let spotifyTokenExpiry = 0;
 
@@ -367,31 +384,38 @@ async function getDeezerArtistImage(artist) {
 
 async function getSpotifyArtistImage(artist) {
   if (artistImageCache.has(artist)) return artistImageCache.get(artist);
-  artistImageCache.set(artist, null);
+  // Return in-flight promise so all callers share one fetch
+  if (artistFetchPromise.has(artist)) return artistFetchPromise.get(artist);
 
-  // Try Spotify
-  const token = await getSpotifyToken();
-  if (token) {
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
-        { headers: { Authorization: 'Bearer ' + token } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const item = data?.artists?.items?.[0];
-        const img = item?.images?.[0]?.url || null;
-        if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
-        if (item?.id) artistIdCache.set(artist, item.id);
-        if (img) { artistImageCache.set(artist, img); return img; }
-      }
-    } catch { /* fall through */ }
-  }
+  const promise = (async () => {
+    // Try Spotify
+    const token = await getSpotifyToken();
+    if (token) {
+      try {
+        const res = await fetch(
+          `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
+          { headers: { Authorization: 'Bearer ' + token } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const item = data?.artists?.items?.[0];
+          const img = item?.images?.[0]?.url || null;
+          if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
+          if (item?.id) artistIdCache.set(artist, item.id);
+          if (img) { artistImageCache.set(artist, img); artistFetchPromise.delete(artist); return img; }
+        }
+      } catch { /* fall through */ }
+    }
+    // Fallback: Deezer (free, no auth, CORS-open)
+    const deezerImg = await getDeezerArtistImage(artist);
+    const result = deezerImg || null;
+    artistImageCache.set(artist, result);
+    artistFetchPromise.delete(artist);
+    return result;
+  })();
 
-  // Fallback: Deezer (free, no auth, CORS-open)
-  const deezerImg = await getDeezerArtistImage(artist);
-  if (deezerImg) artistImageCache.set(artist, deezerImg);
-  return deezerImg || null;
+  artistFetchPromise.set(artist, promise);
+  return promise;
 }
 
 function ArtistPhoto({ artist, className, style: extraStyle }) {
@@ -573,6 +597,7 @@ function App() {
   }, [showsEnriched, tickets, friends]);
 
   const [profileTarget, setProfileTarget] = useState(null); // null=closed, false=new, friend=edit
+  const [viewedFriendId, setViewedFriendId] = useState(null);
 
   // Mutations
   const saveFriendProfile = async ({ id, name, avatar_url, genres, fav_artist }) => {
@@ -589,8 +614,8 @@ function App() {
     setProfileTarget(null);
   };
 
-  const addShow = async ({ date, artist, venue, note }) => {
-    const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null });
+  const addShow = async ({ date, artist, venue, note, crowdvolt_url }) => {
+    const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null, crowdvolt_url: crowdvolt_url || null });
     if (error) { showToast('Error: ' + error.message); return false; }
     showToast('Show added');
     return true;
@@ -660,6 +685,14 @@ function App() {
         ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
         : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
     ),
+    // Friend roster + profile preview
+    friends.length > 0 && h(FriendRoster, {
+      friends,
+      viewedFriendId,
+      setViewedFriendId,
+      currentUser,
+      onEditProfile: (f) => setProfileTarget(f),
+    }),
     // Tabs
     h('div', { className: 'tabs' },
       h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'Shows'),
@@ -803,16 +836,20 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
   const crowdvoltUrl = `https://www.crowdvolt.com/search?q=${encodeURIComponent(show.artist || '')}`;
-  const [concertHref, setConcertHref] = useState(() => getManualEventUrl(show.id) || concertUrlCache.get((show.artist || '') + '|' + (show.date || '')) || null);
+  const [artistHref, setArtistHref] = useState(() => {
+    const manual = getManualEventUrl(show.id);
+    if (manual) return manual;
+    return artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl;
+  });
   useEffect(() => {
-    if (concertHref) return;
-    getSpotifyArtistImage(show.artist).then(() =>
-      getSpotifyConcertUrl(show.artist, show.date).then(url => {
-        setConcertHref(url || crowdvoltUrl);
-      })
-    );
-  }, [show.artist, show.date]);
-  const artistHref = concertHref || crowdvoltUrl;
+    if (artistSpotifyUrlCache.has(show.artist)) {
+      setArtistHref(getManualEventUrl(show.id) || artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl);
+      return;
+    }
+    getSpotifyArtistImage(show.artist).then(() => {
+      setArtistHref(getManualEventUrl(show.id) || artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl);
+    });
+  }, [show.artist]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
@@ -848,10 +885,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
             ),
             show.note && h('p', { style: { fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' } }, show.note),
           ),
-          h('div', { className: 'going-stat' },
-            h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
-            h('div', { className: 'going-stat-value' }, going.length),
-            h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
+          h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 } },
+            h('div', { className: 'going-stat' },
+              h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
+              h('div', { className: 'going-stat-value' }, going.length),
+              h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
+            ),
+            !show.past && h('a', {
+              className: 'get-tickets-btn',
+              href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
+              target: '_blank', rel: 'noopener noreferrer',
+            }, 'Get tickets ↗')
           )
         )
       )
@@ -941,12 +985,13 @@ function AddShowModal({ onClose, onSave }) {
   const [artist, setArtist] = useState('');
   const [venue, setVenue] = useState('');
   const [note, setNote] = useState('');
+  const [crowdvoltUrl, setCrowdvoltUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
-    await onSave({ date, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() });
+    await onSave({ date, artist: artist.trim(), venue: venue.trim() || null, note: note.trim(), crowdvolt_url: crowdvoltUrl.trim() || null });
     setSaving(false);
   };
 
@@ -970,6 +1015,11 @@ function AddShowModal({ onClose, onSave }) {
         h('span', { className: 'field-label' }, 'Note (optional)'),
         h('input', { type: 'text', value: note, onChange: (e) => setNote(e.target.value), placeholder: 'Lineup, presale info, etc.' })
       ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'CrowdVolt event link (optional)'),
+        h('input', { type: 'url', value: crowdvoltUrl, onChange: (e) => setCrowdvoltUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' }),
+        h('p', { style: { fontSize: 11, color: '#666', marginTop: 5 } }, 'Paste the direct event link if you have one. Otherwise we\u2019ll search for you.')
+      ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
         h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save show')
@@ -991,12 +1041,49 @@ function Avatar({ friend, size = 36, style: extraStyle }) {
   }, initials);
 }
 
+// ===== Friend roster + profile preview =====
+function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
+  const viewed = friends.find((f) => f.id === viewedFriendId);
+  const isOwnProfile = currentUser?.id === viewed?.id;
+  return h('div', null,
+    h('div', { className: 'friends-roster' },
+      friends.map((f) => {
+        const isActive = f.id === viewedFriendId;
+        return h('button', {
+          key: f.id,
+          className: 'roster-chip' + (isActive ? ' active' : ''),
+          onClick: () => setViewedFriendId(isActive ? null : f.id),
+        },
+          h('span', { className: 'roster-chip-ring' }, h(Avatar, { friend: f, size: 44 })),
+          h('span', { className: 'roster-chip-name' }, f.name.split(' ')[0])
+        );
+      })
+    ),
+    viewed && h('div', { className: 'profile-preview' },
+      h(Avatar, { friend: viewed, size: 56 }),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { className: 'profile-card-name' }, viewed.name),
+        viewed.fav_artist && h('div', { className: 'profile-card-meta' }, '🎧 ' + viewed.fav_artist),
+        (viewed.genres?.length > 0) && h('div', { className: 'profile-genres' },
+          viewed.genres.map((g) => h('span', { key: g, className: 'genre-chip' }, g))
+        )
+      ),
+      isOwnProfile && h('button', {
+        className: 'ghost-btn',
+        style: { alignSelf: 'flex-start', fontSize: 12, padding: '5px 12px', flexShrink: 0 },
+        onClick: () => onEditProfile(viewed),
+      }, 'Edit profile')
+    )
+  );
+}
+
 // ===== Profile modal =====
 const GENRES = ['Techno', 'House', 'Afro House', 'Afrobeats', 'Melodic Techno', 'Deep House', 'Tech House', 'Progressive House', 'Hip-Hop', 'Reggaeton', 'Drum & Bass', 'Jungle', 'Disco', 'UK Garage', 'Minimal'];
 
 function ProfileModal({ friend, onClose, onSave }) {
   const [name, setName] = useState(friend?.name || '');
-  const [avatarUrl, setAvatarUrl] = useState(friend?.avatar_url || '');
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(friend?.avatar_url || '');
   const [genres, setGenres] = useState(friend?.genres || []);
   const [favArtist, setFavArtist] = useState(friend?.fav_artist || '');
   const [saving, setSaving] = useState(false);
@@ -1006,9 +1093,21 @@ function ProfileModal({ friend, onClose, onSave }) {
   const submit = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    await onSave({ id: friend?.id, name: name.trim(), avatar_url: avatarUrl.trim() || null, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
+    let finalAvatarUrl = previewUrl;
+    if (file) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${Date.now()}.${ext}`;
+      const { data: up } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+      if (up) {
+        const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
+        finalAvatarUrl = pub.publicUrl;
+      }
+    }
+    await onSave({ id: friend?.id, name: name.trim(), avatar_url: finalAvatarUrl || null, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
     setSaving(false);
   };
+
+  const fileInputRef = useRef(null);
 
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
     h('div', { className: 'modal' },
@@ -1016,10 +1115,22 @@ function ProfileModal({ friend, onClose, onSave }) {
       h('h2', { className: 'modal-title', style: { marginBottom: 20 } }, friend ? 'Edit Profile' : 'Create Profile'),
 
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 } },
-        h(Avatar, { friend: { name, avatar_url: avatarUrl }, size: 64 }),
-        h('label', { className: 'field', style: { marginBottom: 0, flex: 1 } },
-          h('span', { className: 'field-label' }, 'Photo URL (optional)'),
-          h('input', { value: avatarUrl, onChange: (e) => setAvatarUrl(e.target.value), placeholder: 'https://...' })
+        h(Avatar, { friend: { name, avatar_url: previewUrl }, size: 64 }),
+        h('div', { style: { flex: 1 } },
+          h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Photo (optional)'),
+          h('input', {
+            ref: fileInputRef, type: 'file', accept: 'image/*',
+            style: { display: 'none' },
+            onChange: (e) => {
+              const f = e.target.files?.[0];
+              if (f) { setFile(f); setPreviewUrl(URL.createObjectURL(f)); }
+            }
+          }),
+          h('button', {
+            type: 'button', className: 'ghost-btn',
+            style: { fontSize: 12, padding: '6px 14px' },
+            onClick: () => fileInputRef.current?.click(),
+          }, previewUrl ? '📷 Change photo' : '📷 Upload photo')
         )
       ),
 
@@ -1258,15 +1369,13 @@ function EditShowModal({ show, onClose, onSave }) {
   const [artist, setArtist] = useState(show.artist || '');
   const [venue, setVenue] = useState(show.venue || '');
   const [note, setNote] = useState(show.note || '');
-  const [eventUrl, setEventUrl] = useState(() => getManualEventUrl(show.id) || '');
+  const [crowdvoltUrl, setCrowdvoltUrl] = useState(show.crowdvolt_url || '');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
-    setManualEventUrl(show.id, eventUrl.trim() || null);
-    if (eventUrl.trim()) concertUrlCache.set((artist.trim() + '|' + (date || '')), eventUrl.trim());
-    await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null });
+    await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null, crowdvolt_url: crowdvoltUrl.trim() || null });
   };
 
   return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
@@ -1289,9 +1398,10 @@ function EditShowModal({ show, onClose, onSave }) {
         h('span', { className: 'field-label' }, 'Note'),
         h('input', { type: 'text', value: note, onChange: e => setNote(e.target.value) })
       ),
-      h('label', { className: 'field' },
-        h('span', { className: 'field-label' }, 'Event Link (Crowdvolt / Spotify)'),
-        h('input', { type: 'url', value: eventUrl, onChange: e => setEventUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' })
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'CrowdVolt event link (optional)'),
+        h('input', { type: 'url', value: crowdvoltUrl, onChange: e => setCrowdvoltUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' }),
+        h('p', { style: { fontSize: 11, color: '#666', marginTop: 5 } }, 'Paste the direct event link if you have one. Otherwise we\u2019ll search for you.')
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
