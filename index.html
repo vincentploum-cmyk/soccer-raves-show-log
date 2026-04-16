@@ -340,117 +340,25 @@ const isPast = (iso) => {
 };
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
-// ===== Spotify artist images =====
-const SPOTIFY_CLIENT_ID = 'ab149bcc2e104c49b3067ddc3ba03155';
-const SPOTIFY_CLIENT_SECRET = 'fd8ad5553e5f449492d9792956e68397';
-
-const artistImageCache = new Map();
+// ===== Spotify artist images (via serverless proxy) =====
 const artistSpotifyUrlCache = new Map();
-const artistIdCache = new Map();
-const concertUrlCache = new Map();
-let spotifyToken = null;
-let spotifyTokenExpiry = 0;
+const artistImageAttempted = new Set();
 
-async function getSpotifyToken() {
-  if (spotifyToken && Date.now() < spotifyTokenExpiry) return spotifyToken;
-  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) return null;
-  try {
-    const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
-      },
-      body: 'grant_type=client_credentials',
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    spotifyToken = data.access_token;
-    spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-    return spotifyToken;
-  } catch { return null; }
+function cleanArtistName(name) {
+  if (!name) return '';
+  return name.split(',')[0]
+    .replace(/\s+b2b\s+.*/i, '')
+    .replace(/\s*\(live\)/i, '')
+    .replace(/\s*\(dj set\)/i, '')
+    .replace(/\s*\(cancelled\)/i, '')
+    .trim();
 }
 
-async function getDeezerArtistImage(artist) {
-  try {
-    const res = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(artist)}&limit=1`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const item = data?.data?.[0];
-    return item?.picture_xl || item?.picture_medium || null;
-  } catch { return null; }
-}
-
-async function getSpotifyArtistImage(artist) {
-  if (artistImageCache.has(artist)) return artistImageCache.get(artist);
-  artistImageCache.set(artist, null);
-  const token = await getSpotifyToken();
-  if (token) {
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
-        { headers: { Authorization: 'Bearer ' + token } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const item = data?.artists?.items?.[0];
-        const img = item?.images?.[0]?.url || null;
-        if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
-        if (item?.id) artistIdCache.set(artist, item.id);
-        if (img) { artistImageCache.set(artist, img); return img; }
-      }
-    } catch { /* fall through */ }
-  }
-  const deezerImg = await getDeezerArtistImage(artist);
-  if (deezerImg) artistImageCache.set(artist, deezerImg);
-  return deezerImg || null;
-}
-
-function ArtistPhoto({ artist, className, style: extraStyle }) {
-  const [imgUrl, setImgUrl] = useState(() => artistImageCache.get(artist) ?? null);
-  useEffect(() => {
-    if (!artist || imgUrl) return;
-    getSpotifyArtistImage(artist).then(url => { if (url) setImgUrl(url); });
-  }, [artist]);
+function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
   const bgStyle = imgUrl
     ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: photoGradient(artist) };
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
-}
-
-// ===== Spotify concert URLs =====
-async function getSpotifyConcertUrl(artist, date) {
-  const key = (artist || '') + '|' + (date || '');
-  if (concertUrlCache.has(key)) return concertUrlCache.get(key);
-  concertUrlCache.set(key, null);
-  const token = await getSpotifyToken();
-  if (!token) return null;
-
-  try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=concert&market=US&limit=10`,
-      { headers: { Authorization: 'Bearer ' + token } }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const items = data?.concerts?.items || [];
-      let match = null;
-      if (date && items.length) {
-        const showTime = new Date(date).getTime();
-        match = items.find(c => {
-          const t = new Date(c.start_date || c.start?.date || c.date || '').getTime();
-          return !isNaN(t) && Math.abs(t - showTime) < 10 * 86400000;
-        });
-      }
-      match = match || items.find(c =>
-        (c.name || '').toLowerCase().includes((artist || '').toLowerCase())
-      ) || items[0];
-      const url = match?.external_urls?.spotify || null;
-      if (url) { concertUrlCache.set(key, url); return url; }
-    }
-  } catch { /* fall through */ }
-
-  return null;
 }
 
 const getManualEventUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
@@ -706,6 +614,10 @@ function App() {
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
       onEditShow: (showId) => setEditShowModal(showId),
+      onArtistImageFetched: useCallback(async (showId, url) => {
+        setShows(prev => prev.map(s => s.id === showId ? { ...s, artist_image_url: url } : s));
+        await sb.from('shows').update({ artist_image_url: url }).eq('id', showId);
+      }, []),
     }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
@@ -787,7 +699,7 @@ function Hero({ totals }) {
 }
 
 // ===== Shows view =====
-function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
+function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
 
   return h('div', null,
@@ -819,7 +731,7 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEd
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -827,7 +739,7 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEd
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
   const going = show.tickets.filter((t) => t.count > 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
@@ -835,16 +747,27 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
   const spotifyFallback = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
-  const [artistHref, setArtistHref] = useState(() => artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
+  const artistHref = artistSpotifyUrlCache.get(show.artist) || spotifyFallback;
+
+  // Fetch artist image via serverless proxy if not yet cached in DB
   useEffect(() => {
-    if (artistSpotifyUrlCache.has(show.artist)) {
-      setArtistHref(artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
+    if (show.artist_image_url !== null && show.artist_image_url !== undefined) {
+      if (show.artist_image_url && artistSpotifyUrlCache) {
+        // no-op — image already in DB
+      }
       return;
     }
-    getSpotifyArtistImage(show.artist).then(() => {
-      setArtistHref(artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
-    });
-  }, [show.artist]);
+    const clean = cleanArtistName(show.artist);
+    if (!clean || artistImageAttempted.has(clean)) return;
+    artistImageAttempted.add(clean);
+    fetch(`/api/artist-image?artist=${encodeURIComponent(clean)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.spotifyUrl) artistSpotifyUrlCache.set(show.artist, data.spotifyUrl);
+        onArtistImageFetched(show.id, data.imageUrl || '');
+      })
+      .catch(() => onArtistImageFetched(show.id, ''));
+  }, [show.id, show.artist_image_url]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
@@ -858,7 +781,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, className: 'artist-photo' }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo' }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -1326,7 +1249,7 @@ function FriendRow({ show, friendId }) {
   const t = show.tickets.find((t) => t.friend_id === friendId);
   const myReact = show.reactions.find((r) => r.friend_id === friendId);
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : '') },
-    h(ArtistPhoto, { artist: show.artist, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
+    h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
       h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
