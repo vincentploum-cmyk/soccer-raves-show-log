@@ -283,6 +283,37 @@ function ArtistPhoto({ artist, className, style: extraStyle }) {
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
 }
 
+// ===== Dice.fm event URLs =====
+const diceEventCache = new Map();
+
+async function getDiceEventUrl(artist, venue) {
+  const key = (artist || '') + '|' + (venue || '');
+  if (diceEventCache.has(key)) return diceEventCache.get(key);
+  diceEventCache.set(key, null);
+  try {
+    const q = [artist, venue].filter(Boolean).join(' ');
+    const target = `https://api.dice.fm/api/v1/search?q=${encodeURIComponent(q)}&types=events`;
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(target));
+    if (!res.ok) return null;
+    const data = await res.json();
+    const events = data?.payload?.events
+      || (Array.isArray(data?.payload?.search_results) ? data.payload.search_results.filter(r => r.type === 'event') : null)
+      || data?.events || [];
+    const first = events[0];
+    if (!first) return null;
+    const url = first.url || first.event_url
+      || (first.id ? `https://dice.fm/event/${first.id}` : null);
+    if (url) diceEventCache.set(key, url);
+    return url;
+  } catch { return null; }
+}
+
+const getManualDiceUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
+const setManualDiceUrl = (showId, url) => {
+  if (url) localStorage.setItem(`dice_url_${showId}`, url);
+  else localStorage.removeItem(`dice_url_${showId}`);
+};
+
 // ===== Toast =====
 function useToast() {
   const [msg, setMsg] = useState(null);
@@ -595,6 +626,13 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
+  const [eventUrl, setEventUrl] = useState(() => getManualDiceUrl(show.id));
+  useEffect(() => {
+    if (eventUrl) return;
+    getDiceEventUrl(show.artist, show.venue).then(url => { if (url) setEventUrl(url); });
+  }, [show.artist, show.venue]);
+  const diceHref = eventUrl || `https://dice.fm/search?q=${encodeURIComponent((show.artist || '') + (show.venue ? ' ' + show.venue : '')}`);
+
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
   const pctUp = (show.upvotes.length + show.downvotes.length) > 0
@@ -616,7 +654,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
               h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
             ),
-            h('div', { className: 'show-title' }, show.artist),
+            h('a', { className: 'show-title', href: diceHref, target: '_blank', rel: 'noopener', style: { display: 'block', color: 'inherit', textDecoration: 'none' } }, show.artist),
             show.venue && h('a', {
               className: 'venue-link',
               href: mapsUrl(show.venue), target: '_blank', rel: 'noopener'
@@ -948,11 +986,14 @@ function EditShowModal({ show, onClose, onSave }) {
   const [artist, setArtist] = useState(show.artist || '');
   const [venue, setVenue] = useState(show.venue || '');
   const [note, setNote] = useState(show.note || '');
+  const [diceUrl, setDiceUrl] = useState(() => getManualDiceUrl(show.id) || '');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
+    setManualDiceUrl(show.id, diceUrl.trim() || null);
+    if (diceUrl.trim()) diceEventCache.set((artist + '|' + venue), diceUrl.trim());
     await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null });
   };
 
@@ -975,6 +1016,10 @@ function EditShowModal({ show, onClose, onSave }) {
       h('label', { className: 'field' },
         h('span', { className: 'field-label' }, 'Note'),
         h('input', { type: 'text', value: note, onChange: e => setNote(e.target.value) })
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Dice.fm URL'),
+        h('input', { type: 'url', value: diceUrl, onChange: e => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' })
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
