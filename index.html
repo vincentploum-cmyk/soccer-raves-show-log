@@ -252,31 +252,57 @@ const isPast = (iso) => {
 };
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
-// ===== Dice.fm artist images =====
-const diceImageCache = new Map();
+// ===== Spotify artist images =====
+const SPOTIFY_CLIENT_ID = '';     // ← paste your Spotify app client_id
+const SPOTIFY_CLIENT_SECRET = ''; // ← paste your Spotify app client_secret
 
-async function getDiceArtistImage(artist) {
-  if (diceImageCache.has(artist)) return diceImageCache.get(artist);
-  diceImageCache.set(artist, null);
+const artistImageCache = new Map();
+let spotifyToken = null;
+let spotifyTokenExpiry = 0;
+
+async function getSpotifyToken() {
+  if (spotifyToken && Date.now() < spotifyTokenExpiry) return spotifyToken;
+  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) return null;
   try {
-    const target = `https://api.dice.fm/api/v1/search?q=${encodeURIComponent(artist)}&types=artists`;
-    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(target));
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
+      },
+      body: 'grant_type=client_credentials',
+    });
     if (!res.ok) return null;
     const data = await res.json();
-    const artists = data?.payload?.artists
-      || (Array.isArray(data?.payload?.search_results) ? data.payload.search_results.filter(r => r.type === 'artist') : null)
-      || data?.artists || [];
-    const img = artists[0]?.image || artists[0]?.artist_image || artists[0]?.photo || null;
-    if (img) diceImageCache.set(artist, img);
+    spotifyToken = data.access_token;
+    spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return spotifyToken;
+  } catch { return null; }
+}
+
+async function getSpotifyArtistImage(artist) {
+  if (artistImageCache.has(artist)) return artistImageCache.get(artist);
+  artistImageCache.set(artist, null);
+  const token = await getSpotifyToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const img = data?.artists?.items?.[0]?.images?.[0]?.url || null;
+    if (img) artistImageCache.set(artist, img);
     return img;
   } catch { return null; }
 }
 
 function ArtistPhoto({ artist, className, style: extraStyle }) {
-  const [imgUrl, setImgUrl] = useState(() => diceImageCache.get(artist) ?? null);
+  const [imgUrl, setImgUrl] = useState(() => artistImageCache.get(artist) ?? null);
   useEffect(() => {
     if (!artist || imgUrl) return;
-    getDiceArtistImage(artist).then(url => { if (url) setImgUrl(url); });
+    getSpotifyArtistImage(artist).then(url => { if (url) setImgUrl(url); });
   }, [artist]);
   const bgStyle = imgUrl ? { backgroundImage: `url(${imgUrl})` } : { background: photoGradient(artist) };
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
