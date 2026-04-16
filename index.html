@@ -499,27 +499,27 @@ function App() {
     const baseFields = { name };
     const tryUpsert = async (fields) => {
       if (id) {
-        return sb.from('friends').update(fields).eq('id', id);
+        return sb.from('friends').update(fields).eq('id', id).select().single();
       } else {
         return sb.from('friends').insert(fields).select().single();
       }
     };
     let { data, error } = await tryUpsert(fullFields);
+    console.log('[saveFriendProfile] update result:', { data, error, avatar_url_length: avatar_url?.length });
     if (error && error.message?.includes('column')) {
       showToast('⚠️ Run DB migration — photo not saved (see console)');
-      console.error('Missing columns in friends table. Run in Supabase SQL editor:\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;');
+      console.error('Missing columns. Run:\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;');
       ({ data, error } = await tryUpsert(baseFields));
     }
-    if (error) { showToast('Error: ' + error.message); return; }
+    if (error) { showToast('Error: ' + error.message); console.error('[saveFriendProfile] error:', error); return; }
+    if (!data) { showToast('Save blocked — check Supabase RLS policies'); console.error('[saveFriendProfile] update returned no data — likely RLS blocking write'); return; }
     if (id) {
       showToast('Profile saved');
-      setFriends(prev => prev.map(f => f.id === id ? { ...f, name, avatar_url, genres, fav_artist } : f));
+      setFriends(prev => prev.map(f => f.id === id ? { ...f, ...data } : f));
     } else {
       showToast('Profile created!');
-      if (data) {
-        setFriends(prev => [...prev, data]);
-        localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend');
-      }
+      setFriends(prev => [...prev, data]);
+      localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend');
     }
     setProfileTarget(null);
   };
