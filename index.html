@@ -846,7 +846,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}/concerts`;
+  const spotifyFallback = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
+  const [artistHref, setArtistHref] = useState(() => artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
+  useEffect(() => {
+    if (artistSpotifyUrlCache.has(show.artist)) {
+      setArtistHref(artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
+      return;
+    }
+    getSpotifyArtistImage(show.artist).then(() => {
+      setArtistHref(artistSpotifyUrlCache.get(show.artist) || spotifyFallback);
+    });
+  }, [show.artist]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
