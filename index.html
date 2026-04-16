@@ -571,6 +571,19 @@ function App() {
     showToast('Show deleted');
   };
 
+  const removeFriend = async (friend) => {
+    if (!confirm(`Remove ${friend.name}? This will also delete all their tickets and reactions.`)) return;
+    await sb.from('tickets').delete().eq('friend_id', friend.id);
+    await sb.from('reactions').delete().eq('friend_id', friend.id);
+    await sb.from('friends').delete().eq('id', friend.id);
+    if (currentUserId === friend.id) {
+      localStorage.removeItem('currentUserId');
+      setCurrentUserId(null);
+    }
+    setSelectedFriendId(null);
+    showToast(`${friend.name} removed`);
+  };
+
   const onArtistImageFetched = useCallback(async (showId, url) => {
     setShows(prev => prev.map(s => s.id === showId ? { ...s, artist_image_url: url } : s));
     await sb.from('shows').update({ artist_image_url: url }).eq('id', showId);
@@ -629,6 +642,7 @@ function App() {
       setSelectedId: setSelectedFriendId,
       onAddTickets: (friendId) => setAddTicketsModal(friendId),
       onEditProfile: (friend) => setProfileTarget(friend),
+      onRemoveFriend: removeFriend,
     }),
     // Modals
     addModalOpen && h(AddShowModal, {
@@ -1239,7 +1253,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
 }
 
 // ===== Per-friend view =====
-function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, onAddTickets, onEditProfile }) {
+function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, onAddTickets, onEditProfile, onRemoveFriend }) {
   const friend = friends.find((f) => f.id === selectedId);
   if (!friend) return h('div', { className: 'empty-state' }, h('h3', null, 'Pick a friend'), h('p', null, 'Or create a profile to get started'));
 
@@ -1258,6 +1272,7 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
   const upPct = (ups + downs) > 0 ? Math.round(100 * ups / (ups + downs)) : null;
 
   const isOwnProfile = currentUser?.id === friend.id;
+  const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
 
   return h('div', null,
     // Profile card
@@ -1270,7 +1285,10 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
           friend.genres.map((g) => h('span', { key: g, className: 'genre-chip' }, g))
         )
       ),
-      isOwnProfile && h('button', { className: 'ghost-btn', style: { alignSelf: 'flex-start', fontSize: 12, padding: '5px 12px' }, onClick: () => onEditProfile(friend) }, 'Edit profile')
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-start' } },
+        isOwnProfile && h('button', { className: 'ghost-btn', style: { fontSize: 12, padding: '5px 12px' }, onClick: () => onEditProfile(friend) }, 'Edit profile'),
+        isAdmin && h('button', { className: 'ghost-btn', style: { fontSize: 12, padding: '5px 12px', color: 'var(--red)', borderColor: 'var(--red)' }, onClick: () => onRemoveFriend(friend) }, 'Remove friend'),
+      )
     ),
     h('div', { className: 'friend-header-row', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' } },
       h('div', null,
