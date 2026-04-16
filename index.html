@@ -778,7 +778,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const spotifyFallback = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
   const artistHref = artistSpotifyUrlCache.get(show.artist) || spotifyFallback;
 
-  // Fetch artist image — serverless proxy first, Deezer client-side as fallback
+  // Fetch thumbnail: CrowdVolt og:image → Spotify (serverless) → Deezer (client-side)
   useEffect(() => {
     if (show.artist_image_url) return;
     const clean = cleanArtistName(show.artist);
@@ -791,19 +791,30 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         .then(d => d?.data?.[0]?.picture_xl || d?.data?.[0]?.picture_medium || null)
         .catch(() => null);
 
-    fetch(`/api/artist-image?artist=${encodeURIComponent(clean)}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(async data => {
+    const artistFallback = async () => {
+      const r = await fetch(`/api/artist-image?artist=${encodeURIComponent(clean)}`).catch(() => null);
+      if (r?.ok) {
+        const data = await r.json().catch(() => ({}));
         if (data.spotifyUrl) artistSpotifyUrlCache.set(show.artist, data.spotifyUrl);
-        if (data.imageUrl) { onArtistImageFetched(show.id, data.imageUrl); return; }
-        const img = await deezer(clean);
-        if (img) onArtistImageFetched(show.id, img);
-      })
-      .catch(async () => {
-        const img = await deezer(clean);
-        if (img) onArtistImageFetched(show.id, img);
-      });
-  }, [show.id, show.artist_image_url]);
+        if (data.imageUrl) return data.imageUrl;
+      }
+      return deezer(clean);
+    };
+
+    (async () => {
+      if (show.crowdvolt_url) {
+        try {
+          const r = await fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`);
+          if (r.ok) {
+            const { imageUrl } = await r.json();
+            if (imageUrl) { onArtistImageFetched(show.id, imageUrl); return; }
+          }
+        } catch {}
+      }
+      const img = await artistFallback();
+      if (img) onArtistImageFetched(show.id, img);
+    })();
+  }, [show.id, show.artist_image_url, show.crowdvolt_url]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
