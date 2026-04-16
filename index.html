@@ -98,6 +98,7 @@
   .badge-hot { background: rgba(255,170,0,0.12); color: #c47800; }
   .badge-past { background: rgba(0,0,0,0.06); color: #999; }
   .badge-cancelled { background: rgba(255,61,90,0.12); color: var(--red); }
+  .badge-going { background: rgba(108,60,255,0.12); color: var(--purple); }
 
   /* Chips */
   .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
@@ -761,6 +762,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
+  const myTicket = currentUser && show.tickets.find((t) => t.friend_id === currentUser.id && t.count > 0);
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
   const pctUp = (show.upvotes.length + show.downvotes.length) > 0
@@ -781,6 +783,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
               h('span', null, formatDate(show.date)),
               h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
+              myTicket && h('span', { className: 'badge badge-going' }, myTicket.count > 1 ? `you're going ×${myTicket.count}` : "you're going!"),
             ),
             h('a', { className: 'show-title', href: artistHref, target: '_blank', rel: 'noopener', style: { display: 'block', color: 'inherit', textDecoration: 'none' } }, show.artist),
             show.venue && h('a', {
