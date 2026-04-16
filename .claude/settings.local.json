@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --input-type=module)",
+      "Bash(node --check /tmp/app_check.mjs)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(node -e ' *)",
+      "Bash(node --check \"C:/Users/vincent.ploum/AppData/Local/Temp/app_check.mjs\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(xargs -I{} node --check \"{}\")",
+      "Bash(echo \"Syntax check exit: $?\")",
+      "Bash(node --check \"C:/Users/vincent.ploum/AppData/Local/Temp/app_check2.mjs\")"
+    ]
+  }
+}

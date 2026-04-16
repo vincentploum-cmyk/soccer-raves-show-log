@@ -337,20 +337,6 @@ const isPast = (iso) => {
 };
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
-// ===== Spotify artist images (via serverless proxy) =====
-const artistSpotifyUrlCache = new Map();
-const artistImageAttempted = new Set();
-
-function cleanArtistName(name) {
-  if (!name) return '';
-  return name.split(',')[0]
-    .replace(/\s+b2b\s+.*/i, '')
-    .replace(/\s*\(live\)/i, '')
-    .replace(/\s*\(dj set\)/i, '')
-    .replace(/\s*\(cancelled\)/i, '')
-    .trim();
-}
-
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
   const bgStyle = imgUrl
     ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -586,11 +572,6 @@ function App() {
     showToast(`${friend.name} removed`);
   };
 
-  const onArtistImageFetched = useCallback(async (showId, url) => {
-    setShows(prev => prev.map(s => s.id === showId ? { ...s, artist_image_url: url } : s));
-    await sb.from('shows').update({ artist_image_url: url }).eq('id', showId);
-  }, []);
-
   if (loading) return h('div', { className: 'loading' }, 'loading');
 
   return h('div', null,
@@ -636,7 +617,6 @@ function App() {
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
       onEditShow: (showId) => setEditShowModal(showId),
-      onArtistImageFetched,
     }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
@@ -729,7 +709,7 @@ function Hero({ totals }) {
 }
 
 // ===== Shows view =====
-function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
+function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
 
   return h('div', null,
@@ -762,7 +742,7 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAd
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -770,53 +750,14 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAd
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
   const going = show.tickets.filter((t) => t.count > 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const spotifyFallback = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
-  const artistHref = artistSpotifyUrlCache.get(show.artist) || spotifyFallback;
-
-  // Fetch thumbnail: CrowdVolt og:image → Spotify (serverless) → Deezer (client-side)
-  useEffect(() => {
-    if (show.artist_image_url) return;
-    const clean = cleanArtistName(show.artist);
-    if (!clean || artistImageAttempted.has(clean)) return;
-    artistImageAttempted.add(clean);
-
-    const deezer = (name) =>
-      fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(name)}&limit=1`)
-        .then(r => r.json())
-        .then(d => d?.data?.[0]?.picture_xl || d?.data?.[0]?.picture_medium || null)
-        .catch(() => null);
-
-    const artistFallback = async () => {
-      const r = await fetch(`/api/artist-image?artist=${encodeURIComponent(clean)}`).catch(() => null);
-      if (r?.ok) {
-        const data = await r.json().catch(() => ({}));
-        if (data.spotifyUrl) artistSpotifyUrlCache.set(show.artist, data.spotifyUrl);
-        if (data.imageUrl) return data.imageUrl;
-      }
-      return deezer(clean);
-    };
-
-    (async () => {
-      if (show.crowdvolt_url) {
-        try {
-          const r = await fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`);
-          if (r.ok) {
-            const { imageUrl } = await r.json();
-            if (imageUrl) { onArtistImageFetched(show.id, imageUrl); return; }
-          }
-        } catch {}
-      }
-      const img = await artistFallback();
-      if (img) onArtistImageFetched(show.id, img);
-    })();
-  }, [show.id, show.artist_image_url, show.crowdvolt_url]);
+  const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
