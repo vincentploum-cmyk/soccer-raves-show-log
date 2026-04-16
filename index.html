@@ -485,23 +485,22 @@ function App() {
     const baseFields = { name };
     const tryUpsert = async (fields) => {
       if (id) {
-        return sb.from('friends').update(fields).eq('id', id).select().single();
+        return sb.from('friends').update(fields).eq('id', id).select();
       } else {
         return sb.from('friends').insert(fields).select().single();
       }
     };
     let { data, error } = await tryUpsert(fullFields);
-    console.log('[saveFriendProfile] update result:', { data, error, avatar_url_length: avatar_url?.length });
     if (error && error.message?.includes('column')) {
       showToast('⚠️ Run DB migration — photo not saved (see console)');
       console.error('Missing columns. Run:\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;');
       ({ data, error } = await tryUpsert(baseFields));
     }
-    if (error) { showToast('Error: ' + error.message); console.error('[saveFriendProfile] error:', error); return; }
-    if (!data) { showToast('Save blocked — check Supabase RLS policies'); console.error('[saveFriendProfile] update returned no data — likely RLS blocking write'); return; }
+    if (error) { showToast('Error: ' + error.message); return; }
     if (id) {
+      if (!data?.length) { showToast('Profile not found'); return; }
       showToast('Profile saved');
-      setFriends(prev => prev.map(f => f.id === id ? { ...f, ...data } : f));
+      setFriends(prev => prev.map(f => f.id === id ? { ...f, ...data[0] } : f));
     } else {
       showToast('Profile created!');
       setFriends(prev => [...prev, data]);
@@ -1065,19 +1064,14 @@ function ProfileModal({ friend, onClose, onSave }) {
     try {
       let finalAvatarUrl = friend?.avatar_url || null; // default: keep existing
       if (file) {
-        // Convert to base64 now (guaranteed portable, no race condition)
-        try { finalAvatarUrl = await resizeToDataUrl(file); } catch {}
-        // Try Supabase Storage for a CDN URL instead
-        try {
-          const ext = file.name.split('.').pop() || 'jpg';
-          const { data: up, error: upErr } = await sb.storage.from('avatars').upload(`${Date.now()}.${ext}`, file, { upsert: true });
-          if (!upErr && up) {
-            const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
-            finalAvatarUrl = pub.publicUrl;
-          }
-        } catch {}
-      } else {
-        finalAvatarUrl = previewUrl || null;
+        const ext = file.name.split('.').pop() || 'jpg';
+        const { data: up, error: upErr } = await sb.storage.from('avatars').upload(`${Date.now()}.${ext}`, file, { upsert: true });
+        if (upErr || !up) {
+          showToast("Couldn't upload photo — try again");
+          return;
+        }
+        const { data: pub } = sb.storage.from('avatars').getPublicUrl(up.path);
+        finalAvatarUrl = pub.publicUrl;
       }
       await onSave({ id: friend?.id, name: name.trim(), avatar_url: finalAvatarUrl, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
     } finally {
