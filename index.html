@@ -53,10 +53,10 @@
   .hero-stat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace; text-shadow: 1px 1px 0 #000; }
   .hero-stat b { display: block; font-size: 26px; color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; text-shadow: 3px 3px 0 #000; }
 
-  /* User picker (top-right floating) */
-  .user-picker { position: sticky; top: 12px; float: right; margin-top: -12px; margin-bottom: 12px; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 999px; padding: 4px 6px 4px 14px; display: inline-flex; align-items: center; gap: 8px; z-index: 20; backdrop-filter: blur(12px); }
+  /* User picker (below hero) */
+  .user-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .user-picker-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
-  .user-picker select { background: transparent; border: none; padding: 4px 8px; font-weight: 500; color: var(--text); cursor: pointer; }
+  .user-picker select { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 999px; padding: 6px 14px; font-weight: 500; color: var(--text); cursor: pointer; width: auto; font-size: 14px; }
 
   /* Tabs */
   .tabs { display: flex; gap: 4px; margin: 16px 0 20px; border-bottom: 1px solid var(--border); clear: both; }
@@ -152,9 +152,6 @@
     .hero-stats { gap: 14px; margin-top: 14px; }
     .hero-stat b { font-size: 20px; }
 
-    /* User picker */
-    .user-picker { top: 8px; padding: 3px 5px 3px 10px; }
-    .user-picker-label { display: none; }
 
     /* Tabs */
     .tabs { margin: 10px 0 14px; }
@@ -618,7 +615,9 @@ function App() {
   if (loading) return h('div', { className: 'loading' }, 'loading');
 
   return h('div', null,
-    // User picker (always visible)
+    // Hero
+    h(Hero, { totals }),
+    // User picker (below hero)
     h('div', { className: 'user-picker' },
       h('span', { className: 'user-picker-label' }, 'you are'),
       h('select', { value: currentUserId || '', onChange: (e) => switchUser(e.target.value ? parseInt(e.target.value) : null) },
@@ -626,8 +625,6 @@ function App() {
         friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
       )
     ),
-    // Hero
-    h(Hero, { totals }),
     // Tabs
     h('div', { className: 'tabs' },
       h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'Shows'),
