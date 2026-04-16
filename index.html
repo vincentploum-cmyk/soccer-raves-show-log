@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Soccer Raves Show Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0612;
+    --bg-2: #13091f;
+    --bg-3: #1c1033;
+    --surface: #1a0f2e;
+    --surface-2: #241444;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-2: rgba(255, 255, 255, 0.16);
+    --text: #f5f0ff;
+    --text-2: #a99fc9;
+    --text-3: #6b5f8a;
+    --magenta: #ff2d92;
+    --purple: #9d5cff;
+    --cyan: #00e5ff;
+    --amber: #ffaa00;
+    --lime: #b4ff00;
+    --red: #ff3d5a;
+    --danger-bg: #2a0a14;
+    --success-bg: #0a2a1e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+  body { background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(157, 92, 255, 0.25), transparent 70%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255, 45, 146, 0.15), transparent 70%), var(--bg); background-attachment: fixed; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, select, textarea { font-family: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color 0.15s; width: 100%; }
+  input:focus, select:focus, textarea:focus { border-color: var(--magenta); }
+  ::placeholder { color: var(--text-3); }
+  a { color: var(--cyan); text-decoration: none; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .display { font-family: 'Bricolage Grotesque', sans-serif; }
+
+  #root { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  /* Hero */
+  .hero { position: relative; padding: 32px 28px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(157, 92, 255, 0.15), rgba(255, 45, 146, 0.12) 50%, rgba(0, 229, 255, 0.08)); margin-bottom: 24px; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 30%, rgba(157, 92, 255, 0.4), transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 45, 146, 0.3), transparent 50%); animation: pulse 8s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .hero-title .accent { background: linear-gradient(90deg, var(--magenta), var(--amber)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero-sub { color: var(--text-2); font-size: 14px; margin-top: 8px; letter-spacing: 0.01em; }
+  .hero-stats { display: flex; gap: 28px; margin-top: 20px; flex-wrap: wrap; }
+  .hero-stat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+  .hero-stat b { display: block; font-size: 26px; color: var(--text); font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; }
+
+  /* User picker (top-right floating) */
+  .user-picker { position: sticky; top: 12px; float: right; margin-top: -12px; margin-bottom: 12px; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 999px; padding: 4px 6px 4px 14px; display: inline-flex; align-items: center; gap: 8px; z-index: 20; backdrop-filter: blur(12px); }
+  .user-picker-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+  .user-picker select { background: transparent; border: none; padding: 4px 8px; font-weight: 500; color: var(--text); cursor: pointer; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin: 16px 0 20px; border-bottom: 1px solid var(--border); clear: both; }
+  .tab { padding: 12px 16px; font-size: 14px; color: var(--text-2); border-bottom: 2px solid transparent; transition: all 0.15s; font-weight: 500; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--magenta); }
+
+  /* Filter bar */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .filter-bar > * { flex: 0 0 auto; }
+  .filter-bar .search { flex: 1; min-width: 180px; }
+  .primary-btn { background: linear-gradient(135deg, var(--magenta), var(--purple)); color: #fff; padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 10px; letter-spacing: 0.02em; transition: transform 0.12s, box-shadow 0.12s; }
+  .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(255, 45, 146, 0.3); }
+  .primary-btn:active { transform: scale(0.98); }
+  .ghost-btn { background: transparent; color: var(--text-2); padding: 8px 14px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border); transition: all 0.12s; }
+  .ghost-btn:hover { color: var(--text); border-color: var(--border-2); }
+
+  /* Show card */
+  .show-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; position: relative; overflow: hidden; transition: transform 0.15s, border-color 0.15s; }
+  .show-card:hover { border-color: var(--border-2); transform: translateY(-1px); }
+  .show-card.upcoming::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--magenta), var(--purple), var(--cyan)); }
+  .show-card.past { opacity: 0.65; }
+  .show-card.past:hover { opacity: 0.9; }
+  .show-card.cancelled { background: linear-gradient(135deg, var(--surface), var(--danger-bg)); }
+
+  .artist-row { display: flex; gap: 14px; align-items: flex-start; }
+  .artist-photo { width: 60px; height: 60px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #fff; background-size: cover; background-position: center; overflow: hidden; position: relative; }
+  .past .artist-photo::after { content: ""; position: absolute; inset: 0; background: rgba(10, 6, 18, 0.4); }
+
+  .show-meta { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
+  .show-title { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; margin-bottom: 2px; }
+  .show-title.strike { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--magenta); }
+
+  .venue-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); text-decoration: none; border-bottom: 1px dashed var(--border-2); padding-bottom: 1px; transition: all 0.15s; }
+  .venue-link:hover { color: var(--cyan); border-bottom-color: var(--cyan); border-bottom-style: solid; }
+  .venue-link.strike { text-decoration: line-through; }
+
+  .going-stat { text-align: right; flex-shrink: 0; }
+  .going-stat-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.12em; }
+  .going-stat-value { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 28px; background: linear-gradient(135deg, var(--magenta), var(--amber)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin: 2px 0; }
+
+  /* Badges */
+  .badge { display: inline-block; font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 999px; letter-spacing: 0.12em; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+  .badge-upcoming { background: rgba(0, 229, 255, 0.15); color: var(--cyan); }
+  .badge-hot { background: rgba(255, 170, 0, 0.15); color: var(--amber); }
+  .badge-past { background: rgba(255, 255, 255, 0.06); color: var(--text-3); }
+  .badge-cancelled { background: rgba(255, 61, 90, 0.15); color: var(--red); }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .chip { font-size: 11px; padding: 5px 10px; border-radius: 999px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; display: inline-flex; align-items: center; gap: 6px; user-select: none; font-weight: 500; border: 1px solid transparent; }
+  .chip:hover { transform: translateY(-1px); }
+  .chip-1 { background: rgba(157, 92, 255, 0.18); color: #d1b8ff; border-color: rgba(157, 92, 255, 0.3); }
+  .chip-1:hover { box-shadow: 0 0 0 2px rgba(157, 92, 255, 0.3); }
+  .chip-vip { background: linear-gradient(135deg, rgba(255, 170, 0, 0.25), rgba(255, 45, 146, 0.2)); color: var(--amber); border-color: rgba(255, 170, 0, 0.4); }
+  .chip-vip:hover { box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.35); }
+  .chip-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: rgba(255, 255, 255, 0.12); padding: 1px 6px; border-radius: 6px; font-weight: 600; }
+  .chip-past { background: rgba(255, 255, 255, 0.04); color: var(--text-3); text-decoration: line-through; cursor: default; border-color: var(--border); }
+  .chip-past:hover { transform: none; }
+  .chip-add { background: transparent; border: 1px dashed var(--border-2); color: var(--text-3); }
+  .chip-add:hover { color: var(--magenta); border-color: var(--magenta); }
+
+  /* Reactions */
+  .reactions { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-radius: 10px; flex-wrap: wrap; border: 1px solid var(--border); }
+  .reactions-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-3); }
+  .react-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); padding: 5px 10px; border-radius: 999px; font-size: 12px; color: var(--text-2); transition: all 0.15s; }
+  .react-btn:hover { transform: translateY(-1px); }
+  .react-btn.up:hover, .react-btn.up.active { background: rgba(180, 255, 0, 0.15); color: var(--lime); border-color: rgba(180, 255, 0, 0.4); }
+  .react-btn.down:hover, .react-btn.down.active { background: rgba(255, 61, 90, 0.15); color: var(--red); border-color: rgba(255, 61, 90, 0.4); }
+  .react-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .reactions-summary { margin-left: auto; font-size: 11px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+
+  /* Avatar group */
+  .avatars { display: inline-flex; }
+  .avatar { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--magenta)); color: #fff; font-size: 9px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--surface-2); margin-left: -5px; font-family: 'Bricolage Grotesque', sans-serif; }
+  .avatar:first-child { margin-left: 0; }
+  .avatar.down { background: linear-gradient(135deg, var(--red), #8b0f28); }
+
+  /* Stat cards */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+  @media (max-width: 600px) { .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat-card { background: var(--surface); border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; border: 1px solid var(--border); }
+  .stat-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-1::before { background: var(--purple); }
+  .stat-2::before { background: var(--magenta); }
+  .stat-3::before { background: var(--amber); }
+  .stat-4::before { background: var(--lime); }
+  .stat-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-3); }
+  .stat-value { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 28px; margin-top: 6px; letter-spacing: -0.02em; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(6, 3, 14, 0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100; animation: fadeIn 0.15s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: 100%; max-width: 460px; border: 1px solid var(--border-2); position: relative; overflow: hidden; max-height: 90vh; overflow-y: auto; }
+  .modal::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--magenta), var(--purple), var(--cyan)); }
+  .modal-title { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .modal-sub { font-size: 11px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-3); }
+  .field { display: block; margin-bottom: 14px; }
+  .field-label { display: block; font-size: 10px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-3); margin-bottom: 6px; }
+
+  .stepper { display: flex; align-items: center; justify-content: space-between; padding: 18px; background: linear-gradient(135deg, rgba(157, 92, 255, 0.2), rgba(255, 45, 146, 0.15)); border-radius: 14px; margin: 16px 0; border: 1px solid rgba(157, 92, 255, 0.3); }
+  .stepper-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-2); color: var(--text); font-size: 20px; font-weight: 600; transition: all 0.15s; }
+  .stepper-btn:hover { background: rgba(255, 255, 255, 0.15); transform: scale(1.05); }
+  .stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .stepper-count { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: -0.03em; }
+
+  /* Per-friend list */
+  .friend-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; transition: border-color 0.12s; }
+  .friend-row:hover { border-color: var(--border-2); }
+  .friend-row.past-row { opacity: 0.6; }
+
+  /* Empty / loading */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-3); }
+  .empty-state h3 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; margin-bottom: 8px; color: var(--text-2); }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 80px 20px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; }
+  .loading::before { content: "◉"; animation: blink 1s infinite; margin-right: 8px; color: var(--magenta); }
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--surface-2); border: 1px solid var(--border-2); padding: 10px 18px; border-radius: 999px; font-size: 13px; z-index: 200; animation: slideUp 0.2s; }
+  @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+  .divider-dashed { border-top: 1px dashed var(--border); margin: 16px 0; }
+
+  /* Section heading between upcoming and past */
+  .section-divider { display: flex; align-items: center; gap: 12px; margin: 28px 0 14px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; }
+  .section-divider::before, .section-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+  .footnote { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 20px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div id="root"><div class="loading">loading</div></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}
+</script>
+
+<script type="module">
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = 'https://dcowszsxgshrcwpikqtv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjb3dzenN4Z3NocmN3cGlrcXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjEwNDYsImV4cCI6MjA5MTkzNzA0Nn0.biYp6ZjyNYLpZBOUgGjxDp5qBObiUzOttrNt0D2LfzQ';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 10 } } });
+
+const h = React.createElement;
+
+// ===== Utilities =====
+const initials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+// Hash artist name → one of 6 gradient photos (stable per artist)
+const photoClass = (artist) => {
+  if (!artist) return 'photo-1';
+  let hash = 0;
+  for (let i = 0; i < artist.length; i++) hash = (hash << 5) - hash + artist.charCodeAt(i);
+  return `photo-${(Math.abs(hash) % 6) + 1}`;
+};
+const photoGradient = (artist) => {
+  const gradients = [
+    'linear-gradient(135deg, #9d5cff 0%, #ff2d92 100%)',
+    'linear-gradient(135deg, #00e5ff 0%, #9d5cff 100%)',
+    'linear-gradient(135deg, #ffaa00 0%, #ff2d92 100%)',
+    'linear-gradient(135deg, #b4ff00 0%, #00e5ff 100%)',
+    'linear-gradient(135deg, #ff3d5a 0%, #ffaa00 100%)',
+    'linear-gradient(135deg, #9d5cff 0%, #00e5ff 100%)',
+  ];
+  if (!artist) return gradients[0];
+  let hash = 0;
+  for (let i = 0; i < artist.length; i++) hash = (hash << 5) - hash + artist.charCodeAt(i);
+  return gradients[Math.abs(hash) % gradients.length];
+};
+
+const formatDate = (iso) => {
+  if (!iso) return 'TBD';
+  const d = new Date(iso + 'T12:00:00');
+  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  return `${days[d.getDay()]} · ${months[d.getMonth()]} ${d.getDate()}`;
+};
+const isPast = (iso) => {
+  if (!iso) return false;
+  return new Date(iso + 'T23:59:59') < new Date();
+};
+const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
+
+// ===== Toast =====
+function useToast() {
+  const [msg, setMsg] = useState(null);
+  const show = useCallback((m) => { setMsg(m); setTimeout(() => setMsg(null), 2500); }, []);
+  const toastEl = msg ? h('div', { className: 'toast' }, msg) : null;
+  return { show, toastEl };
+}
+
+// ===== Root App =====
+function App() {
+  const [friends, setFriends] = useState([]);
+  const [shows, setShows] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [reactions, setReactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(() => {
+    const saved = localStorage.getItem('currentUserId');
+    return saved ? parseInt(saved) : null;
+  });
+  const [tab, setTab] = useState('shows');
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModal, setEditModal] = useState(null); // { showId, friendId }
+  const [filter, setFilter] = useState({ year: 'all', status: 'all', search: '' });
+  const [selectedFriendId, setSelectedFriendId] = useState(null);
+  const { show: showToast, toastEl } = useToast();
+
+  // Load + realtime
+  useEffect(() => {
+    (async () => {
+      const [f, s, t, r] = await Promise.all([
+        sb.from('friends').select('*').order('name'),
+        sb.from('shows').select('*').order('date', { ascending: true }),
+        sb.from('tickets').select('*'),
+        sb.from('reactions').select('*'),
+      ]);
+      setFriends(f.data || []);
+      setShows(s.data || []);
+      setTickets(t.data || []);
+      setReactions(r.data || []);
+      setLoading(false);
+    })();
+
+    const ch = sb.channel('live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shows' }, (p) => {
+        setShows((cur) => applyChange(cur, p));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, (p) => {
+        setTickets((cur) => applyChange(cur, p));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (p) => {
+        setReactions((cur) => applyChange(cur, p));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (p) => {
+        setFriends((cur) => applyChange(cur, p));
+      })
+      .subscribe();
+
+    return () => { sb.removeChannel(ch); };
+  }, []);
+
+  const applyChange = (list, p) => {
+    if (p.eventType === 'INSERT') return [...list, p.new];
+    if (p.eventType === 'UPDATE') return list.map((x) => x.id === p.new.id ? p.new : x);
+    if (p.eventType === 'DELETE') return list.filter((x) => x.id !== p.old.id);
+    return list;
+  };
+
+  const currentUser = friends.find((f) => f.id === currentUserId);
+
+  const switchUser = (id) => {
+    setCurrentUserId(id);
+    if (id) localStorage.setItem('currentUserId', id);
+    else localStorage.removeItem('currentUserId');
+  };
+
+  // Derived data
+  const showsEnriched = useMemo(() => {
+    return shows.map((s) => {
+      const showTix = tickets.filter((t) => t.show_id === s.id);
+      const showReacts = reactions.filter((r) => r.show_id === s.id);
+      const totalTix = showTix.reduce((a, b) => a + b.count, 0);
+      const goingCount = showTix.filter((t) => t.count > 0).length;
+      const upvotes = showReacts.filter((r) => r.vote === 1);
+      const downvotes = showReacts.filter((r) => r.vote === -1);
+      return { ...s, tickets: showTix, reactions: showReacts, totalTix, goingCount, upvotes, downvotes, past: isPast(s.date) };
+    });
+  }, [shows, tickets, reactions]);
+
+  const filtered = useMemo(() => {
+    return showsEnriched.filter((s) => {
+      if (filter.year !== 'all' && s.date && !s.date.startsWith(filter.year)) return false;
+      if (filter.status === 'upcoming' && s.past) return false;
+      if (filter.status === 'past' && !s.past) return false;
+      if (filter.search) {
+        const q = filter.search.toLowerCase();
+        if (!(s.artist || '').toLowerCase().includes(q) && !(s.venue || '').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [showsEnriched, filter]);
+
+  // Sort: upcoming ascending, then past descending
+  const sorted = useMemo(() => {
+    const up = filtered.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const pa = filtered.filter((s) => s.past).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return [...up, ...pa];
+  }, [filtered]);
+
+  const totals = useMemo(() => {
+    const upcoming = showsEnriched.filter((s) => !s.past).length;
+    const totalTix = tickets.reduce((a, b) => a + b.count, 0);
+    const thisYear = new Date().getFullYear();
+    return { upcoming, friends: friends.length, tickets: totalTix, year: thisYear };
+  }, [showsEnriched, tickets, friends]);
+
+  // Mutations
+  const addShow = async ({ date, artist, venue, note }) => {
+    const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null });
+    if (error) { showToast('Error: ' + error.message); return false; }
+    showToast('Show added');
+    return true;
+  };
+
+  const setTicketCount = async (showId, friendId, count, actorId) => {
+    if (count === 0) {
+      const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
+      if (existing) {
+        await sb.from('tickets').delete().eq('id', existing.id);
+      }
+      showToast('Removed');
+      return;
+    }
+    const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
+    if (existing) {
+      await sb.from('tickets').update({ count, added_by_friend_id: actorId, updated_at: new Date().toISOString() }).eq('id', existing.id);
+    } else {
+      await sb.from('tickets').insert({ show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId });
+    }
+    showToast('Saved');
+  };
+
+  const toggleReaction = async (showId, friendId, vote) => {
+    const existing = reactions.find((r) => r.show_id === showId && r.friend_id === friendId);
+    if (existing && existing.vote === vote) {
+      await sb.from('reactions').delete().eq('id', existing.id);
+    } else if (existing) {
+      await sb.from('reactions').update({ vote }).eq('id', existing.id);
+    } else {
+      await sb.from('reactions').insert({ show_id: showId, friend_id: friendId, vote });
+    }
+  };
+
+  const deleteShow = async (id) => {
+    if (!confirm('Delete this show? All tickets and reactions will be removed.')) return;
+    await sb.from('shows').delete().eq('id', id);
+    showToast('Show deleted');
+  };
+
+  if (loading) return h('div', { className: 'loading' }, 'loading');
+
+  return h('div', null,
+    // User picker (always visible)
+    h('div', { className: 'user-picker' },
+      h('span', { className: 'user-picker-label' }, 'you are'),
+      h('select', { value: currentUserId || '', onChange: (e) => switchUser(e.target.value ? parseInt(e.target.value) : null) },
+        h('option', { value: '' }, '— pick name —'),
+        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
+      )
+    ),
+    // Hero
+    h(Hero, { totals }),
+    // Tabs
+    h('div', { className: 'tabs' },
+      h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'Shows'),
+      h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'Per-friend'),
+    ),
+    // Content
+    tab === 'shows' && h(ShowsView, {
+      shows: sorted, friends, currentUser,
+      filter, setFilter,
+      onAdd: () => setAddModalOpen(true),
+      onEditChip: (showId, friendId) => setEditModal({ showId, friendId }),
+      onToggleReaction: toggleReaction,
+      onDeleteShow: deleteShow,
+    }),
+    tab === 'friend' && h(FriendView, {
+      friends, shows: showsEnriched,
+      selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
+      setSelectedId: setSelectedFriendId,
+    }),
+    // Modals
+    addModalOpen && h(AddShowModal, {
+      onClose: () => setAddModalOpen(false),
+      onSave: async (data) => {
+        const ok = await addShow(data);
+        if (ok) setAddModalOpen(false);
+      },
+    }),
+    editModal && h(EditChipModal, {
+      show: showsEnriched.find((s) => s.id === editModal.showId),
+      friends, currentUser,
+      friendId: editModal.friendId,
+      onClose: () => setEditModal(null),
+      onSave: async (count, actorId) => {
+        await setTicketCount(editModal.showId, editModal.friendId, count, actorId);
+        setEditModal(null);
+      },
+    }),
+    toastEl,
+  );
+}
+
+// ===== Hero =====
+function Hero({ totals }) {
+  return h('div', { className: 'hero' },
+    h('div', { className: 'hero-content' },
+      h('h1', { className: 'hero-title' }, 'Soccer Raves ', h('span', { className: 'accent' }, 'Show Log')),
+      h('p', { className: 'hero-sub' }, "Who's going where · Add tickets for anyone · Thumbs on past shows · Venues link to maps"),
+      h('div', { className: 'hero-stats' },
+        h('div', { className: 'hero-stat' }, 'Upcoming', h('b', null, totals.upcoming)),
+        h('div', { className: 'hero-stat' }, 'Friends', h('b', null, totals.friends)),
+        h('div', { className: 'hero-stat' }, 'Tickets held', h('b', null, totals.tickets)),
+        h('div', { className: 'hero-stat' }, 'This year', h('b', null, totals.year)),
+      )
+    )
+  );
+}
+
+// ===== Shows view =====
+function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEditChip, onToggleReaction, onDeleteShow }) {
+  const firstPastIdx = shows.findIndex((s) => s.past);
+
+  return h('div', null,
+    h('div', { className: 'filter-bar' },
+      h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
+        h('option', { value: 'all' }, 'All years'),
+        h('option', { value: '2026' }, '2026'),
+        h('option', { value: '2025' }, '2025'),
+        h('option', { value: '2024' }, '2024'),
+      ),
+      h('select', { value: filter.status, onChange: (e) => setFilter({ ...filter, status: e.target.value }), style: { width: 'auto' } },
+        h('option', { value: 'all' }, 'All shows'),
+        h('option', { value: 'upcoming' }, 'Upcoming only'),
+        h('option', { value: 'past' }, 'Past only'),
+      ),
+      h('input', {
+        className: 'search', type: 'text', placeholder: 'Search artist or venue...',
+        value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
+      }),
+      h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show'),
+    ),
+    !currentUser && h('div', { style: { padding: '12px 16px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid rgba(255, 170, 0, 0.3)', borderRadius: 10, marginBottom: 14, fontSize: 13, color: 'var(--amber)' } },
+      '↑ Pick your name (top right) to add tickets or react to shows'
+    ),
+    shows.length === 0 && h('div', { className: 'empty-state' },
+      h('h3', null, 'No shows match'),
+      h('p', null, 'Try adjusting filters or add a new show.')
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+      shows.map((s, idx) => h(React.Fragment, { key: s.id },
+        idx === firstPastIdx && firstPastIdx > 0 && h('div', { className: 'section-divider' }, 'Past shows'),
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow })
+      ))
+    ),
+    shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
+  );
+}
+
+// ===== Show card =====
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow }) {
+  const going = show.tickets.filter((t) => t.count > 0);
+  const popular = going.length >= 8;
+  const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
+  const goingFriendIds = new Set(going.map((t) => t.friend_id));
+  const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
+
+  const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
+
+  const pctUp = (show.upvotes.length + show.downvotes.length) > 0
+    ? Math.round(100 * show.upvotes.length / (show.upvotes.length + show.downvotes.length))
+    : null;
+
+  let cardClass = 'show-card';
+  if (!show.past) cardClass += ' upcoming';
+  else cardClass += ' past';
+
+  return h('div', { className: cardClass },
+    h('div', { className: 'artist-row' },
+      h('div', {
+        className: 'artist-photo',
+        style: { background: show.past ? photoGradient(show.artist) + ', rgba(0,0,0,0.3)' : photoGradient(show.artist) }
+      }, initials(show.artist)),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { className: 'show-meta', style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } },
+              h('span', { style: show.past ? { textDecoration: 'line-through' } : null }, formatDate(show.date)),
+              h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
+              !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
+            ),
+            h('div', { className: 'show-title' + (show.past ? ' strike' : '') }, show.artist),
+            show.venue && h('a', {
+              className: 'venue-link' + (show.past ? ' strike' : ''),
+              href: mapsUrl(show.venue), target: '_blank', rel: 'noopener'
+            },
+              h('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                h('path', { d: 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' }),
+                h('circle', { cx: 12, cy: 10, r: 3 })
+              ),
+              show.venue
+            ),
+            show.note && h('p', { style: { fontSize: 12, color: 'var(--text-3)', marginTop: 4, fontStyle: 'italic' } }, show.note),
+          ),
+          h('div', { className: 'going-stat' },
+            h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
+            h('div', { className: 'going-stat-value' }, going.length),
+            h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
+          )
+        )
+      )
+    ),
+    // Chips
+    h('div', { className: 'chips' },
+      going.map((t) => {
+        const friend = friendsById[t.friend_id];
+        if (!friend) return null;
+        const cls = show.past ? 'chip-past' : (t.count >= 2 ? 'chip-vip' : 'chip-1');
+        return h('span', {
+          key: t.id,
+          className: 'chip ' + cls,
+          onClick: show.past || !currentUser ? null : () => onEditChip(show.id, friend.id),
+          title: show.past ? null : `Click to edit ${friend.name}'s tickets`,
+        }, friend.name, h('span', { className: 'chip-count' }, t.count));
+      }),
+      !show.past && currentUser && h('button', {
+        className: 'chip chip-add',
+        onClick: () => {
+          const other = nonGoing[0];
+          if (!other) return;
+          onEditChip(show.id, other.id);
+        }
+      }, '+ add a friend')
+    ),
+    // Reactions (past only)
+    show.past && h('div', { className: 'reactions' },
+      h('span', { className: 'reactions-label' }, 'how was it?'),
+      h('button', {
+        className: 'react-btn up' + (myReaction?.vote === 1 ? ' active' : ''),
+        disabled: !currentUser,
+        onClick: () => currentUser && onToggleReaction(show.id, currentUser.id, 1),
+      },
+        h('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+          h('path', { d: 'M7 10v12' }),
+          h('path', { d: 'M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H7V10l4.34-8.68A1.5 1.5 0 0 1 14 2.5v1.62a5 5 0 0 1-.48 2.15Z' })
+        ),
+        h('span', { className: 'react-count' }, show.upvotes.length),
+        show.upvotes.length > 0 && h('span', { className: 'avatars' },
+          show.upvotes.slice(0, 3).map((r) => {
+            const f = friendsById[r.friend_id];
+            return f ? h('span', { key: r.id, className: 'avatar', title: f.name }, f.name[0]) : null;
+          })
+        )
+      ),
+      h('button', {
+        className: 'react-btn down' + (myReaction?.vote === -1 ? ' active' : ''),
+        disabled: !currentUser,
+        onClick: () => currentUser && onToggleReaction(show.id, currentUser.id, -1),
+      },
+        h('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+          h('path', { d: 'M17 14V2' }),
+          h('path', { d: 'M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H17v12l-4.34 8.68a1.5 1.5 0 0 1-2.65-.34Z' })
+        ),
+        h('span', { className: 'react-count' }, show.downvotes.length),
+        show.downvotes.length > 0 && h('span', { className: 'avatars' },
+          show.downvotes.slice(0, 3).map((r) => {
+            const f = friendsById[r.friend_id];
+            return f ? h('span', { key: r.id, className: 'avatar down', title: f.name }, f.name[0]) : null;
+          })
+        )
+      ),
+      pctUp !== null && h('div', { className: 'reactions-summary' },
+        pctUp >= 75 ? '🔥 loved · ' + pctUp + '%' : pctUp >= 50 ? '👌 solid · ' + pctUp + '%' : '💀 skip · ' + pctUp + '%'
+      )
+    ),
+    // Actions row (delete, etc.) — tiny, unobtrusive
+    currentUser && h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 8 } },
+      h('button', {
+        onClick: () => onDeleteShow(show.id),
+        style: { fontSize: 10, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
+      }, 'delete')
+    )
+  );
+}
+
+// ===== Add show modal =====
+function AddShowModal({ onClose, onSave }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(today);
+  const [artist, setArtist] = useState('');
+  const [venue, setVenue] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!artist.trim()) return;
+    setSaving(true);
+    await onSave({ date, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() });
+    setSaving(false);
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal' },
+      h('p', { className: 'modal-sub' }, 'new entry'),
+      h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 20 } }, 'Add show'),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Date'),
+        h('input', { type: 'date', value: date, onChange: (e) => setDate(e.target.value) })
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'DJ / artist *'),
+        h('input', { type: 'text', value: artist, onChange: (e) => setArtist(e.target.value), placeholder: 'e.g. Carl Cox', autoFocus: true })
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Venue'),
+        h('input', { type: 'text', value: venue, onChange: (e) => setVenue(e.target.value), placeholder: 'e.g. Brooklyn Storehouse' })
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Note (optional)'),
+        h('input', { type: 'text', value: note, onChange: (e) => setNote(e.target.value), placeholder: 'Lineup, presale info, etc.' })
+      ),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save show')
+      )
+    )
+  );
+}
+
+// ===== Edit chip modal =====
+function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }) {
+  const friend = friends.find((f) => f.id === friendId);
+  const existing = show.tickets.find((t) => t.friend_id === friendId);
+  const [count, setCount] = useState(existing?.count || 1);
+  const [actorId, setActorId] = useState(currentUser?.id || friendId);
+  const [saving, setSaving] = useState(false);
+  const [pickedFriend, setPickedFriend] = useState(friendId);
+
+  if (!friend) return null;
+
+  // If no existing ticket, allow picking which friend to add
+  const isNew = !existing;
+  const activeFriendId = isNew ? pickedFriend : friendId;
+  const activeFriend = friends.find((f) => f.id === activeFriendId);
+
+  const submit = async () => {
+    setSaving(true);
+    if (isNew && activeFriendId !== friendId) {
+      // Redirect to different friend
+      await onSave(count, actorId);
+    } else {
+      await onSave(count, actorId);
+    }
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal', style: { maxWidth: 400 } },
+      h('p', { className: 'modal-sub' }, show.artist + ' · ' + (show.venue || 'TBD')),
+      h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 20 } }, isNew ? 'Add a friend' : 'Tickets for ' + friend.name),
+      isNew && h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Friend'),
+        h('select', { value: pickedFriend, onChange: (e) => setPickedFriend(parseInt(e.target.value)) },
+          friends.filter((f) => !show.tickets.some((t) => t.friend_id === f.id)).map((f) =>
+            h('option', { key: f.id, value: f.id }, f.name)
+          )
+        )
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, "Who's adding this?"),
+        h('select', { value: actorId || '', onChange: (e) => setActorId(parseInt(e.target.value)) },
+          friends.map((f) => h('option', { key: f.id, value: f.id }, f.name + (currentUser?.id === f.id ? ' (you)' : '')))
+        )
+      ),
+      h('div', { className: 'stepper' },
+        h('button', { className: 'stepper-btn', onClick: () => setCount(Math.max(0, count - 1)), disabled: count === 0 }, '−'),
+        h('div', { style: { textAlign: 'center' } },
+          h('div', { className: 'stepper-count' }, count),
+          h('div', { style: { fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } }, count === 1 ? 'ticket' : 'tickets')
+        ),
+        h('button', { className: 'stepper-btn', onClick: () => setCount(count + 1) }, '+')
+      ),
+      count === 0 && h('p', { style: { fontSize: 11, color: 'var(--red)', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } }, (activeFriend?.name) + ' will be removed from this show'),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: submit, disabled: saving }, saving ? 'Saving...' : 'Save')
+      )
+    )
+  );
+}
+
+// ===== Per-friend view =====
+function FriendView({ friends, shows, selectedId, setSelectedId }) {
+  const friend = friends.find((f) => f.id === selectedId);
+  if (!friend) return h('div', { className: 'empty-state' }, 'Pick a friend');
+
+  const myShows = shows.filter((s) => s.tickets.some((t) => t.friend_id === friend.id && t.count > 0));
+  const upcoming = myShows.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const past = myShows.filter((s) => s.past).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  const totalTix = myShows.reduce((a, s) => {
+    const t = s.tickets.find((t) => t.friend_id === friend.id);
+    return a + (t?.count || 0);
+  }, 0);
+
+  const myReacts = shows.flatMap((s) => s.reactions.filter((r) => r.friend_id === friend.id));
+  const ups = myReacts.filter((r) => r.vote === 1).length;
+  const downs = myReacts.filter((r) => r.vote === -1).length;
+  const upPct = (ups + downs) > 0 ? Math.round(100 * ups / (ups + downs)) : null;
+
+  return h('div', null,
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' } },
+      h('div', null,
+        h('h2', { className: 'display', style: { fontSize: 22, letterSpacing: '-0.02em', fontWeight: 700 } }, friend.name + "'s shows"),
+        h('p', { style: { color: 'var(--text-3)', fontSize: 13, marginTop: 4 } }, 'Everything they are on the list for.')
+      ),
+      h('select', { value: selectedId, onChange: (e) => setSelectedId(parseInt(e.target.value)), style: { width: 'auto' } },
+        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
+      )
+    ),
+    h('div', { className: 'stat-grid' },
+      h('div', { className: 'stat-card stat-1' },
+        h('div', { className: 'stat-label' }, 'Upcoming'),
+        h('div', { className: 'stat-value' }, upcoming.length)),
+      h('div', { className: 'stat-card stat-2' },
+        h('div', { className: 'stat-label' }, 'Tickets held'),
+        h('div', { className: 'stat-value' }, totalTix)),
+      h('div', { className: 'stat-card stat-3' },
+        h('div', { className: 'stat-label' }, 'Past shows'),
+        h('div', { className: 'stat-value' }, past.length)),
+      h('div', { className: 'stat-card stat-4' },
+        h('div', { className: 'stat-label' }, '👍 rate'),
+        h('div', { className: 'stat-value' }, upPct !== null ? upPct + '%' : '—')),
+    ),
+    upcoming.length > 0 && h('div', { className: 'section-divider' }, 'Upcoming'),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+      upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id })),
+    ),
+    past.length > 0 && h('div', { className: 'section-divider' }, 'Past'),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+      past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id })),
+    ),
+    myShows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, friend.name + ' has no shows yet'))
+  );
+}
+function FriendRow({ show, friendId }) {
+  const t = show.tickets.find((t) => t.friend_id === friendId);
+  const myReact = show.reactions.find((r) => r.friend_id === friendId);
+  return h('div', { className: 'friend-row' + (show.past ? ' past-row' : '') },
+    h('div', {
+      style: { width: 34, height: 34, borderRadius: 8, background: photoGradient(show.artist), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 }
+    }, initials(show.artist)),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontWeight: 500, fontSize: 14, textDecoration: show.past ? 'line-through' : 'none' } }, show.artist),
+      h('div', { style: { fontSize: 11, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
+        (show.venue || 'TBD') + ' · ' + formatDate(show.date)
+      )
+    ),
+    myReact && h('span', {
+      style: { fontSize: 14, color: myReact.vote === 1 ? 'var(--lime)' : 'var(--red)' }
+    }, myReact.vote === 1 ? '👍' : '👎'),
+    h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix')
+  );
+}
+
+createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>
