@@ -76,13 +76,10 @@
   .show-card { background: #fff; border: none; border-radius: 16px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04); transition: transform 0.15s, box-shadow 0.15s; }
   .show-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06); }
   .show-card.upcoming::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #B5FF5A; border-radius: 3px 0 0 3px; }
-  .show-card.past { opacity: 0.55; }
-  .show-card.past:hover { opacity: 0.78; transform: none; }
   .show-card.cancelled { background: #fff5f7; }
 
   .artist-row { display: flex; gap: 14px; align-items: flex-start; }
   .artist-photo { width: 60px; height: 60px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #fff; background-size: cover; background-position: center; overflow: hidden; position: relative; }
-  .past .artist-photo::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.25); }
 
   .show-meta { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #4A8A00; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; font-weight: 600; }
   .show-card.past .show-meta { color: #999; }
@@ -223,7 +220,7 @@
   /* Per-friend list */
   .friend-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: none; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04); transition: background 0.12s; }
   .friend-row:hover { background: rgba(0,0,0,0.02); }
-  .friend-row.past-row { opacity: 0.5; }
+  .friend-row.past-row { opacity: 1; }
 
   /* Empty / loading */
   .empty-state { text-align: center; padding: 60px 20px; color: #999; }
