@@ -506,7 +506,8 @@ function App() {
     };
     let { data, error } = await tryUpsert(fullFields);
     if (error && error.message?.includes('column')) {
-      // New columns not yet migrated — retry with just name
+      showToast('⚠️ Run DB migration — photo not saved (see console)');
+      console.error('Missing columns in friends table. Run in Supabase SQL editor:\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;');
       ({ data, error } = await tryUpsert(baseFields));
     }
     if (error) { showToast('Error: ' + error.message); return; }
