@@ -348,32 +348,27 @@ const artistImageCache = new Map();
 const artistSpotifyUrlCache = new Map();
 const artistIdCache = new Map();
 const concertUrlCache = new Map();
-const artistFetchPromise = new Map();
 let spotifyToken = null;
 let spotifyTokenExpiry = 0;
-let tokenFetchPromise = null; // dedup simultaneous token requests
 
 async function getSpotifyToken() {
   if (spotifyToken && Date.now() < spotifyTokenExpiry) return spotifyToken;
-  if (tokenFetchPromise) return tokenFetchPromise;
-  tokenFetchPromise = (async () => {
-    try {
-      // Send credentials in the body (no Authorization header) so the browser
-      // sends a simple CORS request instead of triggering a preflight OPTIONS.
-      // Spotify explicitly supports client_id + client_secret in the POST body.
-      const res = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `grant_type=client_credentials&client_id=${SPOTIFY_CLIENT_ID}&client_secret=${SPOTIFY_CLIENT_SECRET}`,
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      spotifyToken = data.access_token;
-      spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-      return spotifyToken;
-    } catch { return null; } finally { tokenFetchPromise = null; }
-  })();
-  return tokenFetchPromise;
+  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) return null;
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
+      },
+      body: 'grant_type=client_credentials',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    spotifyToken = data.access_token;
+    spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return spotifyToken;
+  } catch { return null; }
 }
 
 async function getDeezerArtistImage(artist) {
@@ -388,37 +383,27 @@ async function getDeezerArtistImage(artist) {
 
 async function getSpotifyArtistImage(artist) {
   if (artistImageCache.has(artist)) return artistImageCache.get(artist);
-  if (artistFetchPromise.has(artist)) return artistFetchPromise.get(artist);
-
-  const promise = (async () => {
-    // 1. Spotify — artist profile photo
-    const token = await getSpotifyToken();
-    if (token) {
-      try {
-        const res = await fetch(
-          `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
-          { headers: { Authorization: 'Bearer ' + token } }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          const item = data?.artists?.items?.[0];
-          const img = item?.images?.[0]?.url || null;
-          if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
-          if (item?.id) artistIdCache.set(artist, item.id);
-          if (img) { artistImageCache.set(artist, img); artistFetchPromise.delete(artist); return img; }
-        }
-      } catch { /* fall through */ }
-    }
-    // 2. Deezer — also returns artist profile photos
-    const deezerImg = await getDeezerArtistImage(artist);
-    const result = deezerImg || null;
-    artistImageCache.set(artist, result);
-    artistFetchPromise.delete(artist);
-    return result;
-  })();
-
-  artistFetchPromise.set(artist, promise);
-  return promise;
+  artistImageCache.set(artist, null);
+  const token = await getSpotifyToken();
+  if (token) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const item = data?.artists?.items?.[0];
+        const img = item?.images?.[0]?.url || null;
+        if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
+        if (item?.id) artistIdCache.set(artist, item.id);
+        if (img) { artistImageCache.set(artist, img); return img; }
+      }
+    } catch { /* fall through */ }
+  }
+  const deezerImg = await getDeezerArtistImage(artist);
+  if (deezerImg) artistImageCache.set(artist, deezerImg);
+  return deezerImg || null;
 }
 
 function ArtistPhoto({ artist, className, style: extraStyle }) {
