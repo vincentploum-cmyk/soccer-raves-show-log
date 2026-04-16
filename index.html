@@ -512,9 +512,13 @@ function App() {
     if (error) { showToast('Error: ' + error.message); return; }
     if (id) {
       showToast('Profile saved');
+      setFriends(prev => prev.map(f => f.id === id ? { ...f, name, avatar_url, genres, fav_artist } : f));
     } else {
       showToast('Profile created!');
-      if (data) { localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend'); }
+      if (data) {
+        setFriends(prev => [...prev, data]);
+        localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend');
+      }
     }
     setProfileTarget(null);
   };
