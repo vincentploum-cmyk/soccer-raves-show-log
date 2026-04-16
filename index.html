@@ -388,6 +388,7 @@ function App() {
   });
   const [tab, setTab] = useState('shows');
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addFriendModalOpen, setAddFriendModalOpen] = useState(false);
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
@@ -615,6 +616,7 @@ function App() {
       shows: sorted, friends, currentUser,
       filter, setFilter,
       onAdd: () => setAddModalOpen(true),
+      onAddFriend: () => setAddFriendModalOpen(true),
       onEditChip: (showId, friendId) => setEditModal({ showId, friendId }),
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
@@ -634,6 +636,16 @@ function App() {
       onSave: async (data) => {
         const ok = await addShow(data);
         if (ok) setAddModalOpen(false);
+      },
+    }),
+    addFriendModalOpen && h(AddFriendModal, {
+      onClose: () => setAddFriendModalOpen(false),
+      onSave: async ({ firstName, lastName }) => {
+        const name = (firstName.trim() + ' ' + lastName.trim()).trim();
+        const { error } = await sb.from('friends').insert({ name });
+        if (error) { showToast('Error: ' + error.message); return; }
+        showToast('Friend added!');
+        setAddFriendModalOpen(false);
       },
     }),
     editModal && h(EditChipModal, {
@@ -701,7 +713,7 @@ function Hero({ totals }) {
 }
 
 // ===== Shows view =====
-function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
+function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onArtistImageFetched }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
 
   return h('div', null,
@@ -721,6 +733,7 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEd
         className: 'search', type: 'text', placeholder: 'Search artist or venue...',
         value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
       }),
+      h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
       h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show'),
     ),
     !currentUser && h('div', { style: { padding: '12px 16px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid rgba(255, 170, 0, 0.3)', borderRadius: 10, marginBottom: 14, fontSize: 13, color: 'var(--amber)' } },
@@ -898,6 +911,40 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         onClick: () => onDeleteShow(show.id),
         style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
       }, 'delete')
+    )
+  );
+}
+
+// ===== Add friend modal =====
+function AddFriendModal({ onClose, onSave }) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!firstName.trim()) return;
+    setSaving(true);
+    try { await onSave({ firstName, lastName }); } finally { setSaving(false); }
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal', style: { maxWidth: 400 } },
+      h('p', { className: 'modal-sub' }, 'new member'),
+      h('h2', { className: 'modal-title', style: { marginBottom: 20 } }, 'Add Friend'),
+      h('div', { style: { display: 'flex', gap: 10 } },
+        h('label', { className: 'field', style: { flex: 1 } },
+          h('span', { className: 'field-label' }, 'First name *'),
+          h('input', { type: 'text', value: firstName, onChange: e => setFirstName(e.target.value), placeholder: 'e.g. Alex', autoFocus: true, onKeyDown: e => e.key === 'Enter' && submit() })
+        ),
+        h('label', { className: 'field', style: { flex: 1 } },
+          h('span', { className: 'field-label' }, 'Last name'),
+          h('input', { type: 'text', value: lastName, onChange: e => setLastName(e.target.value), placeholder: 'e.g. Smith', onKeyDown: e => e.key === 'Enter' && submit() })
+        ),
+      ),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !firstName.trim() }, saving ? 'Saving...' : 'Add friend')
+      )
     )
   );
 }
