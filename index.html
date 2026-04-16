@@ -318,6 +318,8 @@ const SPOTIFY_CLIENT_SECRET = 'fd8ad5553e5f449492d9792956e68397';
 
 const artistImageCache = new Map();
 const artistSpotifyUrlCache = new Map();
+const artistIdCache = new Map();
+const concertUrlCache = new Map();
 let spotifyToken = null;
 let spotifyTokenExpiry = 0;
 
@@ -356,8 +358,10 @@ async function getSpotifyArtistImage(artist) {
     const item = data?.artists?.items?.[0];
     const img = item?.images?.[0]?.url || null;
     const spotifyUrl = item?.external_urls?.spotify || null;
+    const artistId = item?.id || null;
     if (img) artistImageCache.set(artist, img);
     if (spotifyUrl) artistSpotifyUrlCache.set(artist, spotifyUrl);
+    if (artistId) artistIdCache.set(artist, artistId);
     return img;
   } catch { return null; }
 }
@@ -372,33 +376,66 @@ function ArtistPhoto({ artist, className, style: extraStyle }) {
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
 }
 
-// ===== Dice.fm event URLs =====
-const diceEventCache = new Map();
+// ===== Spotify concert URLs =====
+async function getSpotifyConcertUrl(artist, date) {
+  const key = (artist || '') + '|' + (date || '');
+  if (concertUrlCache.has(key)) return concertUrlCache.get(key);
+  concertUrlCache.set(key, null);
+  const token = await getSpotifyToken();
+  if (!token) return null;
 
-async function getDiceEventUrl(artist, venue) {
-  const key = (artist || '') + '|' + (venue || '');
-  if (diceEventCache.has(key)) return diceEventCache.get(key);
-  diceEventCache.set(key, null);
+  const store = (url) => { if (url) concertUrlCache.set(key, url); return url; };
+
+  // Strategy 1: artist concerts endpoint (uses cached artist ID)
+  const artistId = artistIdCache.get(artist);
+  if (artistId) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/artists/${artistId}/concerts?market=US&limit=20`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const items = data?.items || data?.concerts?.items || [];
+        let match = null;
+        if (date && items.length) {
+          const showTime = new Date(date).getTime();
+          match = items.find(c => {
+            const t = new Date(c.start_date || c.date || '').getTime();
+            return !isNaN(t) && Math.abs(t - showTime) < 8 * 86400000;
+          }) || items[0];
+        } else {
+          match = items[0];
+        }
+        const url = match?.external_urls?.spotify || null;
+        if (url) return store(url);
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Strategy 2: search type=concert
   try {
-    const q = [artist, venue].filter(Boolean).join(' ');
-    const target = `https://api.dice.fm/api/v1/search?q=${encodeURIComponent(q)}&types=events`;
-    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(target));
-    if (!res.ok) return null;
-    const data = await res.json();
-    const events = data?.payload?.events
-      || (Array.isArray(data?.payload?.search_results) ? data.payload.search_results.filter(r => r.type === 'event') : null)
-      || data?.events || [];
-    const first = events[0];
-    if (!first) return null;
-    const url = first.url || first.event_url
-      || (first.id ? `https://dice.fm/event/${first.id}` : null);
-    if (url) diceEventCache.set(key, url);
-    return url;
-  } catch { return null; }
+    const q = [artist, date ? date.slice(0, 7) : ''].filter(Boolean).join(' ');
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=concert&market=US&limit=5`,
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const items = data?.concerts?.items || [];
+      const match = items.find(c =>
+        (c.name || '').toLowerCase().includes((artist || '').toLowerCase())
+      ) || items[0];
+      const url = match?.external_urls?.spotify || null;
+      if (url) return store(url);
+    }
+  } catch { /* fall through */ }
+
+  return null;
 }
 
-const getManualDiceUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
-const setManualDiceUrl = (showId, url) => {
+const getManualEventUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
+const setManualEventUrl = (showId, url) => {
   if (url) localStorage.setItem(`dice_url_${showId}`, url);
   else localStorage.removeItem(`dice_url_${showId}`);
 };
@@ -728,15 +765,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [spotifyUrl, setSpotifyUrl] = useState(() => artistSpotifyUrlCache.get(show.artist) || null);
+  const [concertHref, setConcertHref] = useState(() => getManualEventUrl(show.id) || concertUrlCache.get((show.artist || '') + '|' + (show.date || '')) || artistSpotifyUrlCache.get(show.artist) || null);
   useEffect(() => {
-    if (spotifyUrl) return;
-    getSpotifyArtistImage(show.artist).then(() => {
-      const url = artistSpotifyUrlCache.get(show.artist);
-      if (url) setSpotifyUrl(url);
-    });
-  }, [show.artist]);
-  const artistHref = spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`;
+    if (concertHref) return;
+    // Ensure artist image (and ID) is fetched first, then look up concert
+    getSpotifyArtistImage(show.artist).then(() =>
+      getSpotifyConcertUrl(show.artist, show.date).then(url => {
+        setConcertHref(url || artistSpotifyUrlCache.get(show.artist) || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`);
+      })
+    );
+  }, [show.artist, show.date]);
+  const artistHref = concertHref || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
@@ -1091,14 +1130,14 @@ function EditShowModal({ show, onClose, onSave }) {
   const [artist, setArtist] = useState(show.artist || '');
   const [venue, setVenue] = useState(show.venue || '');
   const [note, setNote] = useState(show.note || '');
-  const [diceUrl, setDiceUrl] = useState(() => getManualDiceUrl(show.id) || '');
+  const [eventUrl, setEventUrl] = useState(() => getManualEventUrl(show.id) || '');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
-    setManualDiceUrl(show.id, diceUrl.trim() || null);
-    if (diceUrl.trim()) diceEventCache.set((artist + '|' + venue), diceUrl.trim());
+    setManualEventUrl(show.id, eventUrl.trim() || null);
+    if (eventUrl.trim()) concertUrlCache.set((artist.trim() + '|' + (date || '')), eventUrl.trim());
     await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null });
   };
 
@@ -1123,8 +1162,8 @@ function EditShowModal({ show, onClose, onSave }) {
         h('input', { type: 'text', value: note, onChange: e => setNote(e.target.value) })
       ),
       h('label', { className: 'field' },
-        h('span', { className: 'field-label' }, 'Dice.fm URL'),
-        h('input', { type: 'url', value: diceUrl, onChange: e => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' })
+        h('span', { className: 'field-label' }, 'Spotify Event URL (override)'),
+        h('input', { type: 'url', value: eventUrl, onChange: e => setEventUrl(e.target.value), placeholder: 'https://open.spotify.com/concert/...' })
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
