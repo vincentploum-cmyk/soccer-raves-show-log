@@ -35,7 +35,7 @@
   input, select, textarea { font-family: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color 0.15s; width: 100%; }
   input:focus, select:focus, textarea:focus { border-color: var(--magenta); }
   ::placeholder { color: var(--text-3); }
-  option { background: var(--bg); color: var(--text); }
+  option { background: #16092a; color: #f5f0ff; }
   a { color: var(--cyan); text-decoration: none; }
   .mono { font-family: 'JetBrains Mono', monospace; }
   .display { font-family: 'Bricolage Grotesque', sans-serif; }
@@ -255,6 +255,36 @@ const isPast = (iso) => {
 };
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
+// ===== Dice.fm artist images =====
+const diceImageCache = new Map();
+
+async function getDiceArtistImage(artist) {
+  if (diceImageCache.has(artist)) return diceImageCache.get(artist);
+  diceImageCache.set(artist, null);
+  try {
+    const target = `https://api.dice.fm/api/v1/search?q=${encodeURIComponent(artist)}&types=artists`;
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(target));
+    if (!res.ok) return null;
+    const data = await res.json();
+    const artists = data?.payload?.artists
+      || (Array.isArray(data?.payload?.search_results) ? data.payload.search_results.filter(r => r.type === 'artist') : null)
+      || data?.artists || [];
+    const img = artists[0]?.image || artists[0]?.artist_image || artists[0]?.photo || null;
+    if (img) diceImageCache.set(artist, img);
+    return img;
+  } catch { return null; }
+}
+
+function ArtistPhoto({ artist, className, style: extraStyle }) {
+  const [imgUrl, setImgUrl] = useState(() => diceImageCache.get(artist) ?? null);
+  useEffect(() => {
+    if (!artist || imgUrl) return;
+    getDiceArtistImage(artist).then(url => { if (url) setImgUrl(url); });
+  }, [artist]);
+  const bgStyle = imgUrl ? { backgroundImage: `url(${imgUrl})` } : { background: photoGradient(artist) };
+  return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
+}
+
 // ===== Toast =====
 function useToast() {
   const [msg, setMsg] = useState(null);
@@ -356,11 +386,9 @@ function App() {
     });
   }, [showsEnriched, filter]);
 
-  // Sort: upcoming ascending, then past descending
+  // Sort: all shows ascending by date (earliest first)
   const sorted = useMemo(() => {
-    const up = filtered.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-    const pa = filtered.filter((s) => s.past).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    return [...up, ...pa];
+    return [...filtered].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   }, [filtered]);
 
   const totals = useMemo(() => {
@@ -485,7 +513,7 @@ function Hero({ totals }) {
 
 // ===== Shows view =====
 function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEditChip, onToggleReaction, onDeleteShow }) {
-  const firstPastIdx = shows.findIndex((s) => s.past);
+  const firstUpcomingIdx = shows.findIndex((s) => !s.past);
 
   return h('div', null,
     h('div', { className: 'filter-bar' },
@@ -515,7 +543,7 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onEd
     ),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
-        idx === firstPastIdx && firstPastIdx > 0 && h('div', { className: 'section-divider' }, 'Past shows'),
+        idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
         h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow })
       ))
     ),
@@ -543,10 +571,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h('div', {
-        className: 'artist-photo',
-        style: { background: show.past ? photoGradient(show.artist) + ', rgba(0,0,0,0.3)' : photoGradient(show.artist) }
-      }, initials(show.artist)),
+      h(ArtistPhoto, { artist: show.artist, className: 'artist-photo' }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -812,9 +837,7 @@ function FriendRow({ show, friendId }) {
   const t = show.tickets.find((t) => t.friend_id === friendId);
   const myReact = show.reactions.find((r) => r.friend_id === friendId);
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : '') },
-    h('div', {
-      style: { width: 34, height: 34, borderRadius: 8, background: photoGradient(show.artist), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 }
-    }, initials(show.artist)),
+    h(ArtistPhoto, { artist: show.artist, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
     h('div', { style: { flex: 1, minWidth: 0 } },
       h('div', { style: { fontWeight: 500, fontSize: 14, textDecoration: show.past ? 'line-through' : 'none' } }, show.artist),
       h('div', { style: { fontSize: 11, color: 'var(--text-3)', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
