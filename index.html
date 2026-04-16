@@ -355,27 +355,43 @@ async function getSpotifyToken() {
   } catch { return null; }
 }
 
+async function getDeezerArtistImage(artist) {
+  try {
+    const res = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(artist)}&limit=1`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const item = data?.data?.[0];
+    return item?.picture_xl || item?.picture_medium || null;
+  } catch { return null; }
+}
+
 async function getSpotifyArtistImage(artist) {
   if (artistImageCache.has(artist)) return artistImageCache.get(artist);
   artistImageCache.set(artist, null);
+
+  // Try Spotify
   const token = await getSpotifyToken();
-  if (!token) return null;
-  try {
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
-      { headers: { Authorization: 'Bearer ' + token } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    const item = data?.artists?.items?.[0];
-    const img = item?.images?.[0]?.url || null;
-    const spotifyUrl = item?.external_urls?.spotify || null;
-    const artistId = item?.id || null;
-    if (img) artistImageCache.set(artist, img);
-    if (spotifyUrl) artistSpotifyUrlCache.set(artist, spotifyUrl);
-    if (artistId) artistIdCache.set(artist, artistId);
-    return img;
-  } catch { return null; }
+  if (token) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=artist&limit=1`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const item = data?.artists?.items?.[0];
+        const img = item?.images?.[0]?.url || null;
+        if (item?.external_urls?.spotify) artistSpotifyUrlCache.set(artist, item.external_urls.spotify);
+        if (item?.id) artistIdCache.set(artist, item.id);
+        if (img) { artistImageCache.set(artist, img); return img; }
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Fallback: Deezer (free, no auth, CORS-open)
+  const deezerImg = await getDeezerArtistImage(artist);
+  if (deezerImg) artistImageCache.set(artist, deezerImg);
+  return deezerImg || null;
 }
 
 function ArtistPhoto({ artist, className, style: extraStyle }) {
@@ -384,7 +400,9 @@ function ArtistPhoto({ artist, className, style: extraStyle }) {
     if (!artist || imgUrl) return;
     getSpotifyArtistImage(artist).then(url => { if (url) setImgUrl(url); });
   }, [artist]);
-  const bgStyle = imgUrl ? { backgroundImage: `url(${imgUrl})` } : { background: photoGradient(artist) };
+  const bgStyle = imgUrl
+    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { background: photoGradient(artist) };
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
 }
 
@@ -784,17 +802,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const raSearchUrl = `https://ra.co/search#q=${encodeURIComponent(show.artist || '')}`;
+  const crowdvoltUrl = `https://www.crowdvolt.com/search?q=${encodeURIComponent(show.artist || '')}`;
   const [concertHref, setConcertHref] = useState(() => getManualEventUrl(show.id) || concertUrlCache.get((show.artist || '') + '|' + (show.date || '')) || null);
   useEffect(() => {
     if (concertHref) return;
     getSpotifyArtistImage(show.artist).then(() =>
       getSpotifyConcertUrl(show.artist, show.date).then(url => {
-        setConcertHref(url || raSearchUrl);
+        setConcertHref(url || crowdvoltUrl);
       })
     );
   }, [show.artist, show.date]);
-  const artistHref = concertHref || raSearchUrl;
+  const artistHref = concertHref || crowdvoltUrl;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
@@ -1272,8 +1290,8 @@ function EditShowModal({ show, onClose, onSave }) {
         h('input', { type: 'text', value: note, onChange: e => setNote(e.target.value) })
       ),
       h('label', { className: 'field' },
-        h('span', { className: 'field-label' }, 'Spotify Event URL (override)'),
-        h('input', { type: 'url', value: eventUrl, onChange: e => setEventUrl(e.target.value), placeholder: 'https://open.spotify.com/concert/...' })
+        h('span', { className: 'field-label' }, 'Event Link (Crowdvolt / Spotify)'),
+        h('input', { type: 'url', value: eventUrl, onChange: e => setEventUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' })
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
