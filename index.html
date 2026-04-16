@@ -348,28 +348,32 @@ const artistImageCache = new Map();
 const artistSpotifyUrlCache = new Map();
 const artistIdCache = new Map();
 const concertUrlCache = new Map();
-const artistFetchPromise = new Map(); // dedup concurrent requests
+const artistFetchPromise = new Map();
 let spotifyToken = null;
 let spotifyTokenExpiry = 0;
+let tokenFetchPromise = null; // dedup simultaneous token requests
 
 async function getSpotifyToken() {
   if (spotifyToken && Date.now() < spotifyTokenExpiry) return spotifyToken;
-  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) return null;
-  try {
-    const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
-      },
-      body: 'grant_type=client_credentials',
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    spotifyToken = data.access_token;
-    spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-    return spotifyToken;
-  } catch { return null; }
+  if (tokenFetchPromise) return tokenFetchPromise;
+  tokenFetchPromise = (async () => {
+    try {
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
+        },
+        body: 'grant_type=client_credentials',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      spotifyToken = data.access_token;
+      spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+      return spotifyToken;
+    } catch { return null; } finally { tokenFetchPromise = null; }
+  })();
+  return tokenFetchPromise;
 }
 
 async function getDeezerArtistImage(artist) {
@@ -382,13 +386,22 @@ async function getDeezerArtistImage(artist) {
   } catch { return null; }
 }
 
+async function getITunesArtistImage(artist) {
+  try {
+    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&media=music&entity=musicTrack&limit=1`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const url = data?.results?.[0]?.artworkUrl100;
+    return url ? url.replace('100x100bb', '600x600bb') : null;
+  } catch { return null; }
+}
+
 async function getSpotifyArtistImage(artist) {
   if (artistImageCache.has(artist)) return artistImageCache.get(artist);
-  // Return in-flight promise so all callers share one fetch
   if (artistFetchPromise.has(artist)) return artistFetchPromise.get(artist);
 
   const promise = (async () => {
-    // Try Spotify
+    // 1. Spotify (profile photo — highest quality)
     const token = await getSpotifyToken();
     if (token) {
       try {
@@ -406,9 +419,12 @@ async function getSpotifyArtistImage(artist) {
         }
       } catch { /* fall through */ }
     }
-    // Fallback: Deezer (free, no auth, CORS-open)
+    // 2. Deezer
     const deezerImg = await getDeezerArtistImage(artist);
-    const result = deezerImg || null;
+    if (deezerImg) { artistImageCache.set(artist, deezerImg); artistFetchPromise.delete(artist); return deezerImg; }
+    // 3. iTunes (album art for top track — reliable CORS fallback)
+    const itunesImg = await getITunesArtistImage(artist);
+    const result = itunesImg || null;
     artistImageCache.set(artist, result);
     artistFetchPromise.delete(artist);
     return result;
