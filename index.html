@@ -835,21 +835,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const crowdvoltUrl = `https://www.crowdvolt.com/search?q=${encodeURIComponent(show.artist || '')}`;
-  const [artistHref, setArtistHref] = useState(() => {
-    const manual = getManualEventUrl(show.id);
-    if (manual) return manual;
-    return artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl;
-  });
-  useEffect(() => {
-    if (artistSpotifyUrlCache.has(show.artist)) {
-      setArtistHref(getManualEventUrl(show.id) || artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl);
-      return;
-    }
-    getSpotifyArtistImage(show.artist).then(() => {
-      setArtistHref(getManualEventUrl(show.id) || artistSpotifyUrlCache.get(show.artist) || crowdvoltUrl);
-    });
-  }, [show.artist]);
+  const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}/concerts`;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
