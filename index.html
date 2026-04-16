@@ -242,6 +242,19 @@
   .section-divider::before, .section-divider::after { content: ""; flex: 1; height: 1px; background: rgba(0,0,0,0.08); }
 
   .footnote { font-size: 11px; color: #999; text-align: center; margin-top: 20px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+
+  /* Profile */
+  .user-picker-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .user-picker-edit { font-size: 11px; color: #999; background: none; border: none; cursor: pointer; padding: 0 4px; text-decoration: underline; }
+  .user-picker-edit:hover { color: #0F0F0F; }
+  .user-picker-new { font-size: 11px; color: #4A8A00; background: none; border: none; cursor: pointer; padding: 2px 8px; border-radius: 999px; background: rgba(74,138,0,0.08); font-weight: 600; }
+  .user-picker-new:hover { background: rgba(74,138,0,0.14); }
+  .profile-card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04); display: flex; align-items: flex-start; gap: 16px; }
+  .profile-card-info { flex: 1; min-width: 0; }
+  .profile-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; }
+  .profile-card-meta { font-size: 12px; color: #666; margin-top: 4px; }
+  .profile-genres { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .genre-chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,0.06); color: #444; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -541,7 +554,23 @@ function App() {
     return { upcoming, friends: friends.length, tickets: totalTix, year: thisYear };
   }, [showsEnriched, tickets, friends]);
 
+  const [profileTarget, setProfileTarget] = useState(null); // null=closed, false=new, friend=edit
+
   // Mutations
+  const saveFriendProfile = async ({ id, name, avatar_url, genres, fav_artist }) => {
+    if (id) {
+      const { error } = await sb.from('friends').update({ name, avatar_url, genres, fav_artist }).eq('id', id);
+      if (error) { showToast('Error: ' + error.message); return; }
+      showToast('Profile saved');
+    } else {
+      const { data, error } = await sb.from('friends').insert({ name, avatar_url, genres, fav_artist }).select().single();
+      if (error) { showToast('Error: ' + error.message); return; }
+      showToast('Profile created!');
+      if (data) { localStorage.setItem('currentUserId', data.id); setCurrentUserId(data.id); setSelectedFriendId(data.id); setTab('friend'); }
+    }
+    setProfileTarget(null);
+  };
+
   const addShow = async ({ date, artist, venue, note }) => {
     const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null });
     if (error) { showToast('Error: ' + error.message); return false; }
@@ -598,11 +627,20 @@ function App() {
     h(Hero, { totals }),
     // User picker (below hero)
     h('div', { className: 'user-picker' },
+      h(Avatar, { friend: currentUser, size: 28 }),
       h('span', { className: 'user-picker-label' }, 'you are'),
-      h('select', { value: currentUserId || '', onChange: (e) => switchUser(e.target.value ? parseInt(e.target.value) : null) },
+      h('select', { value: currentUserId || '', onChange: (e) => {
+        const v = e.target.value;
+        if (v === 'new') { setProfileTarget(false); return; }
+        switchUser(v ? parseInt(v) : null);
+      }},
         h('option', { value: '' }, '— pick name —'),
-        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
-      )
+        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
+        h('option', { value: 'new' }, '＋ Create profile')
+      ),
+      currentUser
+        ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
+        : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
     ),
     // Tabs
     h('div', { className: 'tabs' },
@@ -620,10 +658,11 @@ function App() {
       onEditShow: (showId) => setEditShowModal(showId),
     }),
     tab === 'friend' && h(FriendView, {
-      friends, shows: showsEnriched,
+      friends, shows: showsEnriched, currentUser,
       selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
       setSelectedId: setSelectedFriendId,
       onAddTickets: (friendId) => setAddTicketsModal(friendId),
+      onEditProfile: (friend) => setProfileTarget(friend),
     }),
     // Modals
     addModalOpen && h(AddShowModal, {
@@ -659,6 +698,11 @@ function App() {
         const ok = await updateShow(editShowModal, fields);
         if (ok) setEditShowModal(null);
       },
+    }),
+    profileTarget !== null && h(ProfileModal, {
+      friend: profileTarget || null,
+      onClose: () => setProfileTarget(null),
+      onSave: saveFriendProfile,
     }),
     toastEl,
   );
@@ -916,6 +960,82 @@ function AddShowModal({ onClose, onSave }) {
   );
 }
 
+// ===== Avatar =====
+function Avatar({ friend, size = 36, style: extraStyle }) {
+  const s = { width: size, height: size, borderRadius: '50%', flexShrink: 0, ...extraStyle };
+  if (friend?.avatar_url) {
+    return h('img', { src: friend.avatar_url, style: { ...s, objectFit: 'cover' } });
+  }
+  const initials = (friend?.name || '?').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+  const hue = (friend?.name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
+  return h('div', {
+    style: { ...s, background: `hsl(${hue},60%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: Math.round(size * 0.36), fontFamily: 'Bricolage Grotesque, sans-serif' }
+  }, initials);
+}
+
+// ===== Profile modal =====
+const GENRES = ['Techno', 'House', 'Afro House', 'Afrobeats', 'Melodic Techno', 'Deep House', 'Tech House', 'Progressive House', 'Hip-Hop', 'Reggaeton', 'Drum & Bass', 'Jungle', 'Disco', 'UK Garage', 'Minimal'];
+
+function ProfileModal({ friend, onClose, onSave }) {
+  const [name, setName] = useState(friend?.name || '');
+  const [avatarUrl, setAvatarUrl] = useState(friend?.avatar_url || '');
+  const [genres, setGenres] = useState(friend?.genres || []);
+  const [favArtist, setFavArtist] = useState(friend?.fav_artist || '');
+  const [saving, setSaving] = useState(false);
+
+  const toggleGenre = (g) => setGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
+
+  const submit = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    await onSave({ id: friend?.id, name: name.trim(), avatar_url: avatarUrl.trim() || null, genres: genres.length ? genres : null, fav_artist: favArtist.trim() || null });
+    setSaving(false);
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal' },
+      h('p', { className: 'modal-sub' }, friend ? 'edit your profile' : 'welcome!'),
+      h('h2', { className: 'modal-title', style: { marginBottom: 20 } }, friend ? 'Edit Profile' : 'Create Profile'),
+
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 } },
+        h(Avatar, { friend: { name, avatar_url: avatarUrl }, size: 64 }),
+        h('label', { className: 'field', style: { marginBottom: 0, flex: 1 } },
+          h('span', { className: 'field-label' }, 'Photo URL (optional)'),
+          h('input', { value: avatarUrl, onChange: (e) => setAvatarUrl(e.target.value), placeholder: 'https://...' })
+        )
+      ),
+
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Name'),
+        h('input', { value: name, onChange: (e) => setName(e.target.value), placeholder: 'Your name', autoFocus: true })
+      ),
+
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Favorite Artist'),
+        h('input', { value: favArtist, onChange: (e) => setFavArtist(e.target.value), placeholder: 'e.g. Juliet Fox' })
+      ),
+
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 8 } }, 'Genres You Like'),
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+          GENRES.map((g) => h('button', {
+            key: g, type: 'button',
+            className: 'chip ' + (genres.includes(g) ? 'chip-mine' : 'chip-1'),
+            onClick: () => toggleGenre(g),
+          }, g))
+        )
+      ),
+
+      h('div', { style: { display: 'flex', gap: 8, marginTop: 20 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', style: { flex: 1 }, onClick: submit, disabled: saving || !name.trim() },
+          saving ? 'Saving…' : (friend ? 'Save Changes' : 'Create Profile')
+        )
+      )
+    )
+  );
+}
+
 // ===== Edit chip modal =====
 function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }) {
   const friend = friends.find((f) => f.id === friendId);
@@ -978,9 +1098,9 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
 }
 
 // ===== Per-friend view =====
-function FriendView({ friends, shows, selectedId, setSelectedId, onAddTickets }) {
+function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, onAddTickets, onEditProfile }) {
   const friend = friends.find((f) => f.id === selectedId);
-  if (!friend) return h('div', { className: 'empty-state' }, 'Pick a friend');
+  if (!friend) return h('div', { className: 'empty-state' }, h('h3', null, 'Pick a friend'), h('p', null, 'Or create a profile to get started'));
 
   const myShows = shows.filter((s) => s.tickets.some((t) => t.friend_id === friend.id && t.count > 0));
   const upcoming = myShows.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -996,7 +1116,21 @@ function FriendView({ friends, shows, selectedId, setSelectedId, onAddTickets })
   const downs = myReacts.filter((r) => r.vote === -1).length;
   const upPct = (ups + downs) > 0 ? Math.round(100 * ups / (ups + downs)) : null;
 
+  const isOwnProfile = currentUser?.id === friend.id;
+
   return h('div', null,
+    // Profile card
+    h('div', { className: 'profile-card' },
+      h(Avatar, { friend, size: 64 }),
+      h('div', { className: 'profile-card-info' },
+        h('div', { className: 'profile-card-name' }, friend.name),
+        friend.fav_artist && h('div', { className: 'profile-card-meta' }, '🎧 ' + friend.fav_artist),
+        (friend.genres?.length > 0) && h('div', { className: 'profile-genres' },
+          friend.genres.map((g) => h('span', { key: g, className: 'genre-chip' }, g))
+        )
+      ),
+      isOwnProfile && h('button', { className: 'ghost-btn', style: { alignSelf: 'flex-start', fontSize: 12, padding: '5px 12px' }, onClick: () => onEditProfile(friend) }, 'Edit profile')
+    ),
     h('div', { className: 'friend-header-row', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' } },
       h('div', null,
         h('h2', { className: 'display', style: { fontSize: 22, letterSpacing: '-0.02em', fontWeight: 700 } }, friend.name + "'s shows"),
