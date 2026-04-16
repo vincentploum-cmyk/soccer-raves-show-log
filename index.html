@@ -570,6 +570,11 @@ function App() {
     showToast('Show deleted');
   };
 
+  const onArtistImageFetched = useCallback(async (showId, url) => {
+    setShows(prev => prev.map(s => s.id === showId ? { ...s, artist_image_url: url } : s));
+    await sb.from('shows').update({ artist_image_url: url }).eq('id', showId);
+  }, []);
+
   if (loading) return h('div', { className: 'loading' }, 'loading');
 
   return h('div', null,
@@ -614,10 +619,7 @@ function App() {
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
       onEditShow: (showId) => setEditShowModal(showId),
-      onArtistImageFetched: useCallback(async (showId, url) => {
-        setShows(prev => prev.map(s => s.id === showId ? { ...s, artist_image_url: url } : s));
-        await sb.from('shows').update({ artist_image_url: url }).eq('id', showId);
-      }, []),
+      onArtistImageFetched,
     }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
@@ -1312,13 +1314,13 @@ function AddTicketsModal({ friendId, friends, shows, currentUser, onClose, onSav
 
 // ===== Edit show modal =====
 function EditShowModal({ show, onClose, onSave }) {
-  if (!show) return null;
-  const [date, setDate] = useState(show.date || '');
-  const [artist, setArtist] = useState(show.artist || '');
-  const [venue, setVenue] = useState(show.venue || '');
-  const [note, setNote] = useState(show.note || '');
-  const [crowdvoltUrl, setCrowdvoltUrl] = useState(show.crowdvolt_url || '');
+  const [date, setDate] = useState(show?.date || '');
+  const [artist, setArtist] = useState(show?.artist || '');
+  const [venue, setVenue] = useState(show?.venue || '');
+  const [note, setNote] = useState(show?.note || '');
+  const [crowdvoltUrl, setCrowdvoltUrl] = useState(show?.crowdvolt_url || '');
   const [saving, setSaving] = useState(false);
+  if (!show) return null;
 
   const submit = async () => {
     if (!artist.trim()) return;
