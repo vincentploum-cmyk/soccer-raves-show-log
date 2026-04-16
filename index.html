@@ -257,6 +257,7 @@ const SPOTIFY_CLIENT_ID = 'ab149bcc2e104c49b3067ddc3ba03155';
 const SPOTIFY_CLIENT_SECRET = 'fd8ad5553e5f449492d9792956e68397';
 
 const artistImageCache = new Map();
+const artistSpotifyUrlCache = new Map();
 let spotifyToken = null;
 let spotifyTokenExpiry = 0;
 
@@ -292,8 +293,11 @@ async function getSpotifyArtistImage(artist) {
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const img = data?.artists?.items?.[0]?.images?.[0]?.url || null;
+    const item = data?.artists?.items?.[0];
+    const img = item?.images?.[0]?.url || null;
+    const spotifyUrl = item?.external_urls?.spotify || null;
     if (img) artistImageCache.set(artist, img);
+    if (spotifyUrl) artistSpotifyUrlCache.set(artist, spotifyUrl);
     return img;
   } catch { return null; }
 }
@@ -664,12 +668,15 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [eventUrl, setEventUrl] = useState(() => getManualDiceUrl(show.id));
+  const [spotifyUrl, setSpotifyUrl] = useState(() => artistSpotifyUrlCache.get(show.artist) || null);
   useEffect(() => {
-    if (eventUrl) return;
-    getDiceEventUrl(show.artist, show.venue).then(url => { if (url) setEventUrl(url); });
-  }, [show.artist, show.venue]);
-  const diceHref = eventUrl || `https://dice.fm/search?q=${encodeURIComponent((show.artist || '') + (show.venue ? ' ' + show.venue : ''))}`;
+    if (spotifyUrl) return;
+    getSpotifyArtistImage(show.artist).then(() => {
+      const url = artistSpotifyUrlCache.get(show.artist);
+      if (url) setSpotifyUrl(url);
+    });
+  }, [show.artist]);
+  const artistHref = spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
@@ -692,7 +699,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
               h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
             ),
-            h('a', { className: 'show-title', href: diceHref, target: '_blank', rel: 'noopener', style: { display: 'block', color: 'inherit', textDecoration: 'none' } }, show.artist),
+            h('a', { className: 'show-title', href: artistHref, target: '_blank', rel: 'noopener', style: { display: 'block', color: 'inherit', textDecoration: 'none' } }, show.artist),
             show.venue && h('a', {
               className: 'venue-link',
               href: mapsUrl(show.venue), target: '_blank', rel: 'noopener'
