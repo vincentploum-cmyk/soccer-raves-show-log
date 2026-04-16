@@ -43,16 +43,15 @@
   #root { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
 
   /* Hero */
-  .hero { position: relative; padding: 32px 28px; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(157, 92, 255, 0.15), rgba(255, 45, 146, 0.12) 50%, rgba(0, 229, 255, 0.08)); margin-bottom: 24px; }
-  .hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 30%, rgba(157, 92, 255, 0.4), transparent 50%), radial-gradient(circle at 80% 70%, rgba(255, 45, 146, 0.3), transparent 50%); animation: pulse 8s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-  .hero-content { position: relative; z-index: 1; }
-  .hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
-  .hero-title .accent { background: linear-gradient(90deg, var(--magenta), var(--amber)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-  .hero-sub { color: var(--text-2); font-size: 14px; margin-top: 8px; letter-spacing: 0.01em; }
+  .hero { position: relative; padding: 32px 28px; border-radius: 20px; overflow: hidden; border: 3px solid #000; box-shadow: 6px 6px 0 #000; background: url('Soccer.png') center/cover no-repeat; min-height: 280px; margin-bottom: 24px; display: flex; align-items: flex-end; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.55), rgba(0,0,0,0.35)); }
+  .hero-content { position: relative; z-index: 1; width: 100%; }
+  .hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: #fff; text-shadow: 3px 3px 0 #000; }
+  .hero-title .accent { color: #FFEC3D; -webkit-text-fill-color: #FFEC3D; background: none; text-shadow: 3px 3px 0 #000; }
+  .hero-sub { color: rgba(255,255,255,0.85); font-size: 14px; margin-top: 8px; letter-spacing: 0.01em; text-shadow: 1px 1px 0 #000; }
   .hero-stats { display: flex; gap: 28px; margin-top: 20px; flex-wrap: wrap; }
-  .hero-stat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
-  .hero-stat b { display: block; font-size: 26px; color: var(--text); font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; }
+  .hero-stat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace; text-shadow: 1px 1px 0 #000; }
+  .hero-stat b { display: block; font-size: 26px; color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; text-shadow: 3px 3px 0 #000; }
 
   /* User picker (top-right floating) */
   .user-picker { position: sticky; top: 12px; float: right; margin-top: -12px; margin-bottom: 12px; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 999px; padding: 4px 6px 4px 14px; display: inline-flex; align-items: center; gap: 8px; z-index: 20; backdrop-filter: blur(12px); }
@@ -566,7 +565,20 @@ function App() {
 function Hero({ totals }) {
   return h('div', { className: 'hero' },
     h('div', { className: 'hero-content' },
-      h('h1', { className: 'hero-title' }, 'Soccer Raves ', h('span', { className: 'accent' }, 'Show Log')),
+      h('h1', { className: 'hero-title' },
+        h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 64 64', width: '0.9em', height: '0.9em', style: { verticalAlign: 'middle', marginRight: '10px', filter: 'drop-shadow(3px 3px 0 #000)' } },
+          h('circle', { cx: 32, cy: 32, r: 30, fill: '#fff', stroke: '#000', strokeWidth: 3 }),
+          h('polygon', { points: '32,10 38,22 26,22', fill: '#000' }),
+          h('polygon', { points: '32,54 38,42 26,42', fill: '#000' }),
+          h('polygon', { points: '10,32 22,26 22,38', fill: '#000' }),
+          h('polygon', { points: '54,32 42,26 42,38', fill: '#000' }),
+          h('polygon', { points: '14,16 24,20 20,30', fill: '#000' }),
+          h('polygon', { points: '50,16 40,20 44,30', fill: '#000' }),
+          h('polygon', { points: '14,48 24,44 20,34', fill: '#000' }),
+          h('polygon', { points: '50,48 40,44 44,34', fill: '#000' }),
+        ),
+        'Soccer Raves ', h('span', { className: 'accent' }, 'Show Log')
+      ),
       h('p', { className: 'hero-sub' }, "Who's going where · Add tickets for anyone · Thumbs on past shows · Venues link to maps"),
       h('div', { className: 'hero-stats' },
         h('div', { className: 'hero-stat' }, 'Upcoming', h('b', null, totals.upcoming)),
