@@ -498,9 +498,9 @@ function App() {
     }
     if (error) { showToast('Error: ' + error.message); return; }
     if (id) {
-      if (!data?.length) { showToast('Profile not found'); return; }
       showToast('Profile saved');
-      setFriends(prev => prev.map(f => f.id === id ? { ...f, ...data[0] } : f));
+      const merged = data?.length ? data[0] : { name, avatar_url, genres, fav_artist };
+      setFriends(prev => prev.map(f => f.id === id ? { ...f, ...merged } : f));
     } else {
       showToast('Profile created!');
       setFriends(prev => [...prev, data]);
