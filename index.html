@@ -305,6 +305,7 @@ function App() {
   const [tab, setTab] = useState('shows');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
+  const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
   const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
@@ -360,8 +361,13 @@ function App() {
 
   const switchUser = (id) => {
     setCurrentUserId(id);
-    if (id) localStorage.setItem('currentUserId', id);
-    else localStorage.removeItem('currentUserId');
+    if (id) {
+      localStorage.setItem('currentUserId', id);
+      setSelectedFriendId(id);
+      setTab('friend');
+    } else {
+      localStorage.removeItem('currentUserId');
+    }
   };
 
   // Derived data
@@ -484,6 +490,7 @@ function App() {
       friends, shows: showsEnriched,
       selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
       setSelectedId: setSelectedFriendId,
+      onAddTickets: (friendId) => setAddTicketsModal(friendId),
     }),
     // Modals
     addModalOpen && h(AddShowModal, {
@@ -501,6 +508,15 @@ function App() {
       onSave: async (count, actorId) => {
         await setTicketCount(editModal.showId, editModal.friendId, count, actorId);
         setEditModal(null);
+      },
+    }),
+    addTicketsModal !== null && h(AddTicketsModal, {
+      friendId: addTicketsModal,
+      friends, shows: showsEnriched, currentUser,
+      onClose: () => setAddTicketsModal(null),
+      onSave: async (showId, friendId, count) => {
+        await setTicketCount(showId, friendId, count, currentUser?.id || friendId);
+        setAddTicketsModal(null);
       },
     }),
     editShowModal !== null && h(EditShowModal, {
@@ -804,7 +820,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
 }
 
 // ===== Per-friend view =====
-function FriendView({ friends, shows, selectedId, setSelectedId }) {
+function FriendView({ friends, shows, selectedId, setSelectedId, onAddTickets }) {
   const friend = friends.find((f) => f.id === selectedId);
   if (!friend) return h('div', { className: 'empty-state' }, 'Pick a friend');
 
@@ -828,8 +844,11 @@ function FriendView({ friends, shows, selectedId, setSelectedId }) {
         h('h2', { className: 'display', style: { fontSize: 22, letterSpacing: '-0.02em', fontWeight: 700 } }, friend.name + "'s shows"),
         h('p', { style: { color: 'var(--text-3)', fontSize: 13, marginTop: 4 } }, 'Everything they are on the list for.')
       ),
-      h('select', { value: selectedId, onChange: (e) => setSelectedId(parseInt(e.target.value)), style: { width: 'auto' } },
-        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+        h('button', { className: 'primary-btn', onClick: () => onAddTickets(friend.id) }, '+ Add tickets'),
+        h('select', { value: selectedId, onChange: (e) => setSelectedId(parseInt(e.target.value)), style: { width: 'auto' } },
+          friends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
+        )
       )
     ),
     h('div', { className: 'stat-grid' },
@@ -872,6 +891,53 @@ function FriendRow({ show, friendId }) {
       style: { fontSize: 14, color: myReact.vote === 1 ? 'var(--lime)' : 'var(--red)' }
     }, myReact.vote === 1 ? '👍' : '👎'),
     h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix')
+  );
+}
+
+// ===== Add tickets modal =====
+function AddTicketsModal({ friendId, friends, shows, currentUser, onClose, onSave }) {
+  const allShows = [...shows].filter(s => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const [selFriendId, setSelFriendId] = useState(friendId || currentUser?.id || friends[0]?.id);
+  const [selShowId, setSelShowId] = useState(allShows[0]?.id ?? null);
+  const [count, setCount] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const selFriend = friends.find(f => f.id === selFriendId);
+
+  const submit = async () => {
+    if (!selShowId || !selFriendId) return;
+    setSaving(true);
+    await onSave(selShowId, selFriendId, count);
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal', style: { maxWidth: 400 } },
+      h('p', { className: 'modal-sub' }, 'add tickets'),
+      h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 20 } }, selFriend ? 'Tickets for ' + selFriend.name : 'Add tickets'),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Friend'),
+        h('select', { value: selFriendId || '', onChange: e => setSelFriendId(parseInt(e.target.value)) },
+          friends.map(f => h('option', { key: f.id, value: f.id }, f.name + (currentUser?.id === f.id ? ' (you)' : '')))
+        )
+      ),
+      h('label', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Show'),
+        h('select', { value: selShowId || '', onChange: e => setSelShowId(parseInt(e.target.value)) },
+          allShows.map(s => h('option', { key: s.id, value: s.id }, formatDate(s.date) + ' · ' + s.artist))
+        )
+      ),
+      h('div', { className: 'stepper' },
+        h('button', { className: 'stepper-btn', onClick: () => setCount(Math.max(1, count - 1)), disabled: count <= 1 }, '−'),
+        h('div', { style: { textAlign: 'center' } },
+          h('div', { className: 'stepper-count' }, count),
+          h('div', { style: { fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } }, count === 1 ? 'ticket' : 'tickets')
+        ),
+        h('button', { className: 'stepper-btn', onClick: () => setCount(count + 1) }, '+')
+      ),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !selShowId }, saving ? 'Saving...' : 'Save')
+      )
+    )
   );
 }
 
