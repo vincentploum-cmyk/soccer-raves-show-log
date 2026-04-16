@@ -381,50 +381,27 @@ async function getSpotifyConcertUrl(artist, date) {
   const token = await getSpotifyToken();
   if (!token) return null;
 
-  const store = (url) => { if (url) concertUrlCache.set(key, url); return url; };
-
-  // Strategy 1: artist concerts endpoint (uses cached artist ID)
-  const artistId = artistIdCache.get(artist);
-  if (artistId) {
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/artists/${artistId}/concerts?market=US&limit=20`,
-        { headers: { Authorization: 'Bearer ' + token } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const items = data?.items || data?.concerts?.items || [];
-        let match = null;
-        if (date && items.length) {
-          const showTime = new Date(date).getTime();
-          match = items.find(c => {
-            const t = new Date(c.start_date || c.date || '').getTime();
-            return !isNaN(t) && Math.abs(t - showTime) < 8 * 86400000;
-          }) || items[0];
-        } else {
-          match = items[0];
-        }
-        const url = match?.external_urls?.spotify || null;
-        if (url) return store(url);
-      }
-    } catch { /* fall through */ }
-  }
-
-  // Strategy 2: search type=concert
   try {
-    const q = [artist, date ? date.slice(0, 7) : ''].filter(Boolean).join(' ');
     const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=concert&market=US&limit=5`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(artist)}&type=concert&market=US&limit=10`,
       { headers: { Authorization: 'Bearer ' + token } }
     );
     if (res.ok) {
       const data = await res.json();
       const items = data?.concerts?.items || [];
-      const match = items.find(c =>
+      let match = null;
+      if (date && items.length) {
+        const showTime = new Date(date).getTime();
+        match = items.find(c => {
+          const t = new Date(c.start_date || c.start?.date || c.date || '').getTime();
+          return !isNaN(t) && Math.abs(t - showTime) < 10 * 86400000;
+        });
+      }
+      match = match || items.find(c =>
         (c.name || '').toLowerCase().includes((artist || '').toLowerCase())
       ) || items[0];
       const url = match?.external_urls?.spotify || null;
-      if (url) return store(url);
+      if (url) { concertUrlCache.set(key, url); return url; }
     }
   } catch { /* fall through */ }
 
@@ -762,17 +739,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [concertHref, setConcertHref] = useState(() => getManualEventUrl(show.id) || concertUrlCache.get((show.artist || '') + '|' + (show.date || '')) || artistSpotifyUrlCache.get(show.artist) || null);
+  const raSearchUrl = `https://ra.co/search#q=${encodeURIComponent(show.artist || '')}`;
+  const [concertHref, setConcertHref] = useState(() => getManualEventUrl(show.id) || concertUrlCache.get((show.artist || '') + '|' + (show.date || '')) || null);
   useEffect(() => {
     if (concertHref) return;
-    // Ensure artist image (and ID) is fetched first, then look up concert
     getSpotifyArtistImage(show.artist).then(() =>
       getSpotifyConcertUrl(show.artist, show.date).then(url => {
-        setConcertHref(url || artistSpotifyUrlCache.get(show.artist) || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`);
+        setConcertHref(url || raSearchUrl);
       })
     );
   }, [show.artist, show.date]);
-  const artistHref = concertHref || `https://open.spotify.com/search/${encodeURIComponent(show.artist)}`;
+  const artistHref = concertHref || raSearchUrl;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
