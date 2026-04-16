@@ -52,6 +52,8 @@
   .hero-stats { display: flex; gap: 28px; margin-top: 20px; flex-wrap: wrap; }
   .hero-stat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace; text-shadow: 1px 1px 0 #000; }
   .hero-stat b { display: block; font-size: 26px; color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; text-shadow: 3px 3px 0 #000; }
+  .hero-spotify-badge { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.52); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 999px; padding: 5px 10px 5px 6px; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-decoration: none; border: 1px solid rgba(255,255,255,0.12); }
+  .hero-spotify-badge:hover { background: rgba(0,0,0,0.75); }
 
   /* User picker (below hero) */
   .user-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -665,19 +667,18 @@ function App() {
 // ===== Hero =====
 function Hero({ totals }) {
   return h('div', { className: 'hero' },
+    h('a', { className: 'hero-spotify-badge', href: 'https://open.spotify.com', target: '_blank', rel: 'noopener noreferrer' },
+      h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: 16, height: 16, style: { flexShrink: 0 } },
+        h('circle', { cx: 12, cy: 12, r: 12, fill: '#1DB954' }),
+        h('path', { d: 'M6.5 8.8 C9 7.2 15 7.2 17.5 8.8', stroke: '#fff', strokeWidth: 1.6, strokeLinecap: 'round', fill: 'none' }),
+        h('path', { d: 'M7.5 11.5 C9.5 10.1 14.5 10.1 16.5 11.5', stroke: '#fff', strokeWidth: 1.5, strokeLinecap: 'round', fill: 'none' }),
+        h('path', { d: 'M8.5 14.2 C10 13.1 14 13.1 15.5 14.2', stroke: '#fff', strokeWidth: 1.4, strokeLinecap: 'round', fill: 'none' }),
+      ),
+      'Powered by Spotify'
+    ),
     h('div', { className: 'hero-content' },
       h('h1', { className: 'hero-title' },
-        h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 64 64', width: '0.9em', height: '0.9em', style: { verticalAlign: 'middle', marginRight: '10px', filter: 'drop-shadow(3px 3px 0 #000)' } },
-          h('circle', { cx: 32, cy: 32, r: 30, fill: '#fff', stroke: '#000', strokeWidth: 3 }),
-          h('polygon', { points: '32,10 38,22 26,22', fill: '#000' }),
-          h('polygon', { points: '32,54 38,42 26,42', fill: '#000' }),
-          h('polygon', { points: '10,32 22,26 22,38', fill: '#000' }),
-          h('polygon', { points: '54,32 42,26 42,38', fill: '#000' }),
-          h('polygon', { points: '14,16 24,20 20,30', fill: '#000' }),
-          h('polygon', { points: '50,16 40,20 44,30', fill: '#000' }),
-          h('polygon', { points: '14,48 24,44 20,34', fill: '#000' }),
-          h('polygon', { points: '50,48 40,44 44,34', fill: '#000' }),
-        ),
+        h('span', { style: { verticalAlign: 'middle', marginRight: '10px', filter: 'drop-shadow(3px 3px 0 #000)', fontSize: '0.85em' } }, '⚽'),
         'Soccer Raves ', h('span', { className: 'accent' }, 'Show Log')
       ),
       h('p', { className: 'hero-sub' }, "Who's going where · Add tickets for anyone · Thumbs on past shows · Venues link to maps"),
