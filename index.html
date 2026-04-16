@@ -135,7 +135,67 @@
 
   /* Stat cards */
   .stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
-  @media (max-width: 600px) { .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    #root { padding: 16px 14px 70px; }
+    .hero { padding: 24px 20px; min-height: 240px; }
+    .hero-stats { gap: 18px; }
+  }
+
+  @media (max-width: 600px) {
+    #root { padding: 12px 12px 60px; }
+
+    /* Hero */
+    .hero { padding: 16px 14px; min-height: 200px; box-shadow: 4px 4px 0 #000; border-width: 2px; }
+    .hero-sub { font-size: 12px; }
+    .hero-stats { gap: 14px; margin-top: 14px; }
+    .hero-stat b { font-size: 20px; }
+
+    /* User picker */
+    .user-picker { top: 8px; padding: 3px 5px 3px 10px; }
+    .user-picker-label { display: none; }
+
+    /* Tabs */
+    .tabs { margin: 10px 0 14px; }
+    .tab { padding: 10px 10px; font-size: 13px; }
+
+    /* Filter bar — search full width first, selects share row */
+    .filter-bar { gap: 6px; }
+    .filter-bar .search { order: -1; flex: 1 1 100%; min-width: 0; }
+    .filter-bar select { flex: 1 1 calc(50% - 3px); min-width: 0; width: auto; }
+    .filter-bar .primary-btn { flex: 1 1 100%; text-align: center; }
+
+    /* Show card */
+    .show-card { padding: 12px 13px; }
+    .artist-photo { width: 46px; height: 46px; font-size: 15px; border-radius: 8px; }
+    .show-title { font-size: 15px; }
+    .show-meta { font-size: 10px; }
+    .going-stat-value { font-size: 22px; }
+    .going-stat-label { font-size: 9px; }
+
+    /* Stat grid */
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* Modal */
+    .modal-overlay { padding: 10px; align-items: flex-end; }
+    .modal { border-radius: 16px 16px 12px 12px; padding: 20px 16px; max-height: 95vh; }
+    .modal-title { font-size: 18px; }
+    .stepper-count { font-size: 30px; }
+    .stepper { padding: 14px; }
+    .stepper-btn { width: 36px; height: 36px; font-size: 18px; }
+
+    /* Friend view header stacks */
+    .friend-header-row { flex-direction: column; align-items: flex-start !important; }
+    .friend-header-row > div:last-child { width: 100%; }
+    .friend-header-row > div:last-child select { flex: 1; }
+  }
+
+  @media (max-width: 380px) {
+    .hero-title { font-size: clamp(20px, 7vw, 28px); }
+    .artist-row { gap: 10px; }
+    .going-stat-value { font-size: 18px; }
+  }
   .stat-card { background: var(--surface); border-radius: 12px; padding: 14px 16px; position: relative; overflow: hidden; border: 1px solid var(--border); }
   .stat-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .stat-1::before { background: var(--purple); }
@@ -922,7 +982,7 @@ function FriendView({ friends, shows, selectedId, setSelectedId, onAddTickets })
   const upPct = (ups + downs) > 0 ? Math.round(100 * ups / (ups + downs)) : null;
 
   return h('div', null,
-    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' } },
+    h('div', { className: 'friend-header-row', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' } },
       h('div', null,
         h('h2', { className: 'display', style: { fontSize: 22, letterSpacing: '-0.02em', fontWeight: 700 } }, friend.name + "'s shows"),
         h('p', { style: { color: 'var(--text-3)', fontSize: 13, marginTop: 4 } }, 'Everything they are on the list for.')
