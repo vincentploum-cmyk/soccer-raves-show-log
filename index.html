@@ -490,16 +490,19 @@ function App() {
         return sb.from('friends').insert(fields).select().single();
       }
     };
+    console.log('[profile save] sending to DB:', fullFields);
     let { data, error } = await tryUpsert(fullFields);
+    console.log('[profile save] result:', { data, error });
+    let usedFallback = false;
     if (error && error.message?.includes('column')) {
-      showToast('⚠️ Run DB migration — photo not saved (see console)');
-      console.error('Missing columns. Run:\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;');
+      usedFallback = true;
+      alert('⚠️ DB migration not run!\n\nGo to Supabase → SQL Editor and run:\n\nALTER TABLE friends ADD COLUMN IF NOT EXISTS avatar_url TEXT;\nALTER TABLE friends ADD COLUMN IF NOT EXISTS genres TEXT[];\nALTER TABLE friends ADD COLUMN IF NOT EXISTS fav_artist TEXT;\n\nPhoto was NOT saved.');
       ({ data, error } = await tryUpsert(baseFields));
     }
     if (error) { showToast('Error: ' + error.message); return; }
     if (id) {
-      showToast('Profile saved');
-      const merged = data?.length ? data[0] : { name, avatar_url, genres, fav_artist };
+      showToast('Profile saved' + (usedFallback ? ' (name only — run migration for photo)' : ''));
+      const merged = data?.length ? data[0] : { name, ...(usedFallback ? {} : { avatar_url, genres, fav_artist }) };
       setFriends(prev => prev.map(f => f.id === id ? { ...f, ...merged } : f));
     } else {
       showToast('Profile created!');
