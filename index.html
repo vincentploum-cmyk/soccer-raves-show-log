@@ -386,22 +386,12 @@ async function getDeezerArtistImage(artist) {
   } catch { return null; }
 }
 
-async function getITunesArtistImage(artist) {
-  try {
-    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(artist)}&media=music&entity=musicTrack&limit=1`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const url = data?.results?.[0]?.artworkUrl100;
-    return url ? url.replace('100x100bb', '600x600bb') : null;
-  } catch { return null; }
-}
-
 async function getSpotifyArtistImage(artist) {
   if (artistImageCache.has(artist)) return artistImageCache.get(artist);
   if (artistFetchPromise.has(artist)) return artistFetchPromise.get(artist);
 
   const promise = (async () => {
-    // 1. Spotify (profile photo — highest quality)
+    // 1. Spotify — artist profile photo
     const token = await getSpotifyToken();
     if (token) {
       try {
@@ -419,12 +409,9 @@ async function getSpotifyArtistImage(artist) {
         }
       } catch { /* fall through */ }
     }
-    // 2. Deezer
+    // 2. Deezer — also returns artist profile photos
     const deezerImg = await getDeezerArtistImage(artist);
-    if (deezerImg) { artistImageCache.set(artist, deezerImg); artistFetchPromise.delete(artist); return deezerImg; }
-    // 3. iTunes (album art for top track — reliable CORS fallback)
-    const itunesImg = await getITunesArtistImage(artist);
-    const result = itunesImg || null;
+    const result = deezerImg || null;
     artistImageCache.set(artist, result);
     artistFetchPromise.delete(artist);
     return result;
