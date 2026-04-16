@@ -160,7 +160,7 @@
     /* Filter bar — search full width first, selects share row */
     .filter-bar { gap: 6px; }
     .filter-bar .search { order: -1; flex: 1 1 100%; min-width: 0; }
-    .filter-bar select { flex: 1 1 calc(50% - 3px); min-width: 0; width: auto; }
+    .filter-bar select { flex: 1 1 calc(33% - 4px); min-width: 0; width: auto; }
     .filter-bar .primary-btn { flex: 1 1 100%; text-align: center; }
 
     /* Show card */
@@ -376,7 +376,7 @@ function App() {
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
-  const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', search: '' });
+  const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', venue: 'all', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
 
@@ -457,6 +457,7 @@ function App() {
       if (filter.year !== 'all' && s.date && !s.date.startsWith(filter.year)) return false;
       if (filter.status === 'upcoming' && s.past) return false;
       if (filter.status === 'past' && !s.past) return false;
+      if (filter.venue !== 'all' && s.venue !== filter.venue) return false;
       if (filter.search) {
         const q = filter.search.toLowerCase();
         if (!(s.artist || '').toLowerCase().includes(q) && !(s.venue || '').toLowerCase().includes(q)) return false;
@@ -612,7 +613,7 @@ function App() {
     ),
     // Content
     tab === 'shows' && h(ShowsView, {
-      shows: sorted, friends, currentUser,
+      shows: sorted, allShows: showsEnriched, friends, currentUser,
       filter, setFilter,
       onAdd: () => setAddModalOpen(true),
       onAddFriend: () => setAddFriendModalOpen(true),
@@ -712,8 +713,12 @@ function Hero({ totals }) {
 }
 
 // ===== Shows view =====
-function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
+function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
+  const venues = useMemo(() => {
+    const set = new Set(allShows.map(s => s.venue).filter(Boolean));
+    return [...set].sort();
+  }, [allShows]);
 
   return h('div', null,
     h('div', { className: 'filter-bar' },
@@ -727,6 +732,10 @@ function ShowsView({ shows, friends, currentUser, filter, setFilter, onAdd, onAd
         h('option', { value: 'all' }, 'All shows'),
         h('option', { value: 'upcoming' }, 'Upcoming only'),
         h('option', { value: 'past' }, 'Past only'),
+      ),
+      h('select', { value: filter.venue, onChange: (e) => setFilter({ ...filter, venue: e.target.value }), style: { width: 'auto' } },
+        h('option', { value: 'all' }, 'All venues'),
+        venues.map(v => h('option', { key: v, value: v }, v)),
       ),
       h('input', {
         className: 'search', type: 'text', placeholder: 'Search artist or venue...',
