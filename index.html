@@ -764,20 +764,31 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const spotifyFallback = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
   const artistHref = artistSpotifyUrlCache.get(show.artist) || spotifyFallback;
 
-  // Fetch artist image via serverless proxy if not yet cached in DB
+  // Fetch artist image — serverless proxy first, Deezer client-side as fallback
   useEffect(() => {
-    if (show.artist_image_url) return; // real URL already cached — skip
+    if (show.artist_image_url) return;
     const clean = cleanArtistName(show.artist);
     if (!clean || artistImageAttempted.has(clean)) return;
     artistImageAttempted.add(clean);
+
+    const deezer = (name) =>
+      fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(name)}&limit=1`)
+        .then(r => r.json())
+        .then(d => d?.data?.[0]?.picture_xl || d?.data?.[0]?.picture_medium || null)
+        .catch(() => null);
+
     fetch(`/api/artist-image?artist=${encodeURIComponent(clean)}`)
-      .then(r => r.json())
-      .then(data => {
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(async data => {
         if (data.spotifyUrl) artistSpotifyUrlCache.set(show.artist, data.spotifyUrl);
-        if (data.imageUrl) onArtistImageFetched(show.id, data.imageUrl);
-        // no-op on null — don't write empty string to DB so we can retry next session
+        if (data.imageUrl) { onArtistImageFetched(show.id, data.imageUrl); return; }
+        const img = await deezer(clean);
+        if (img) onArtistImageFetched(show.id, img);
       })
-      .catch(() => {}); // silent fail — retry next session
+      .catch(async () => {
+        const img = await deezer(clean);
+        if (img) onArtistImageFetched(show.id, img);
+      });
   }, [show.id, show.artist_image_url]);
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
