@@ -643,7 +643,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     if (eventUrl) return;
     getDiceEventUrl(show.artist, show.venue).then(url => { if (url) setEventUrl(url); });
   }, [show.artist, show.venue]);
-  const diceHref = eventUrl || `https://dice.fm/search?q=${encodeURIComponent((show.artist || '') + (show.venue ? ' ' + show.venue : '')}`);
+  const diceHref = eventUrl || `https://dice.fm/search?q=${encodeURIComponent((show.artist || '') + (show.venue ? ' ' + show.venue : ''))}`;
 
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
