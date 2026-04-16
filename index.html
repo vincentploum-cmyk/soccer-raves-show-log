@@ -832,7 +832,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           className: 'chip ' + cls,
           onClick: show.past || !currentUser ? null : () => onEditChip(show.id, friend.id),
           title: show.past ? null : `Click to edit ${friend.name}'s tickets`,
-        }, friend.name, isMe && !show.past ? ' ✓' : null, h('span', { className: 'chip-count' }, t.count));
+        },
+          friend.avatar_url && h('img', { src: friend.avatar_url, style: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } }),
+          friend.name, isMe && !show.past ? ' ✓' : null, h('span', { className: 'chip-count' }, t.count));
       }),
       !show.past && currentUser && h('button', {
         className: 'chip chip-add',
@@ -859,7 +861,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         show.upvotes.length > 0 && h('span', { className: 'avatars' },
           show.upvotes.slice(0, 3).map((r) => {
             const f = friendsById[r.friend_id];
-            return f ? h('span', { key: r.id, className: 'avatar', title: f.name }, f.name[0]) : null;
+            if (!f) return null;
+            return f.avatar_url
+              ? h('img', { key: r.id, className: 'avatar', src: f.avatar_url, title: f.name, style: { objectFit: 'cover' } })
+              : h('span', { key: r.id, className: 'avatar', title: f.name }, f.name[0]);
           })
         )
       ),
@@ -876,7 +881,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         show.downvotes.length > 0 && h('span', { className: 'avatars' },
           show.downvotes.slice(0, 3).map((r) => {
             const f = friendsById[r.friend_id];
-            return f ? h('span', { key: r.id, className: 'avatar down', title: f.name }, f.name[0]) : null;
+            if (!f) return null;
+            return f.avatar_url
+              ? h('img', { key: r.id, className: 'avatar down', src: f.avatar_url, title: f.name, style: { objectFit: 'cover' } })
+              : h('span', { key: r.id, className: 'avatar down', title: f.name }, f.name[0]);
           })
         )
       ),
