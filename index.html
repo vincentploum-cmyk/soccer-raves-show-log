@@ -143,6 +143,8 @@
     #root { padding: 16px 14px 70px; }
     .hero { padding: 24px 20px; min-height: 240px; }
     .hero-stats { gap: 18px; }
+    /* Prevent iOS Safari from zooming on input focus (triggers when font-size < 16px) */
+    input, select, textarea { font-size: 16px; }
   }
 
   @media (max-width: 600px) {
