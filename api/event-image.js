@@ -106,6 +106,14 @@ export default async function handler(req, res) {
             const prices = found.filter(f => f.value >= 100 && f.value <= 99999);
             if (prices.length) price = Math.min(...prices.map(f => f.value)) / 100;
           }
+
+          // Fallback: scan raw string for amount_from (Dice "from price" in cents)
+          if (price === null) {
+            const raw = nextDataMatch[1];
+            const amountFromMatches = [...raw.matchAll(/[\\]*"amount_from[\\]*"\s*:\s*[\\]*"?(\d{3,6})[\\]*"?/g)]
+              .map(m => parseFloat(m[1])).filter(p => !isNaN(p) && p >= 100 && p <= 99999);
+            if (amountFromMatches.length) price = Math.min(...amountFromMatches) / 100;
+          }
         } catch (_) {}
       }
     }
