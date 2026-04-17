@@ -549,8 +549,8 @@ function App() {
     setProfileTarget(null);
   };
 
-  const addShow = async ({ date, artist, venue, note, crowdvolt_url }) => {
-    const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null, crowdvolt_url: crowdvolt_url || null });
+  const addShow = async ({ date, artist, venue, note, crowdvolt_url, dice_url }) => {
+    const { error } = await sb.from('shows').insert({ date, artist, venue, note: note || null, crowdvolt_url: crowdvolt_url || null, dice_url: dice_url || null });
     if (error) { showToast('Error: ' + error.message); return false; }
     showToast('Show added');
     return true;
@@ -823,6 +823,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   const [eventImgUrl, setEventImgUrl] = useState(null);
   const [ticketPrice, setTicketPrice] = useState(null);
+  const [dicePrice, setDicePrice] = useState(null);
   useEffect(() => {
     if (!show.crowdvolt_url) return;
     fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
@@ -833,6 +834,13 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       })
       .catch(() => {});
   }, [show.crowdvolt_url]);
+  useEffect(() => {
+    if (!show.dice_url) return;
+    fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
+      .then(r => r.json())
+      .then(d => { if (d.price) setDicePrice(d.price); })
+      .catch(() => {});
+  }, [show.dice_url]);
 
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
@@ -878,15 +886,27 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
               h('div', { className: 'going-stat-value' }, going.length),
               h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
             ),
-            !show.past && h('a', {
-              className: 'get-tickets-btn',
-              href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
-              target: '_blank', rel: 'noopener noreferrer',
-            },
-              h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
-              'Get tickets',
-              ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
-              '↗'
+            !show.past && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' } },
+              h('a', {
+                className: 'get-tickets-btn',
+                href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
+                target: '_blank', rel: 'noopener noreferrer',
+              },
+                h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
+                'Get tickets',
+                ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
+                '↗'
+              ),
+              show.dice_url && h('a', {
+                className: 'get-tickets-btn',
+                href: show.dice_url,
+                target: '_blank', rel: 'noopener noreferrer',
+              },
+                h('img', { src: 'https://dice.fm/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
+                'Dice',
+                dicePrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
+                '↗'
+              )
             )
           )
         )
@@ -1016,12 +1036,13 @@ function AddShowModal({ onClose, onSave }) {
   const [venue, setVenue] = useState('');
   const [note, setNote] = useState('');
   const [crowdvoltUrl, setCrowdvoltUrl] = useState('');
+  const [diceUrl, setDiceUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
-    await onSave({ date, artist: artist.trim(), venue: venue.trim() || null, note: note.trim(), crowdvolt_url: crowdvoltUrl.trim() || null });
+    await onSave({ date, artist: artist.trim(), venue: venue.trim() || null, note: note.trim(), crowdvolt_url: crowdvoltUrl.trim() || null, dice_url: diceUrl.trim() || null });
     setSaving(false);
   };
 
@@ -1048,7 +1069,10 @@ function AddShowModal({ onClose, onSave }) {
       h('div', { className: 'field' },
         h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'CrowdVolt event link (optional)'),
         h('input', { type: 'url', value: crowdvoltUrl, onChange: (e) => setCrowdvoltUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' }),
-        h('p', { style: { fontSize: 11, color: '#666', marginTop: 5 } }, 'Paste the direct event link if you have one. Otherwise we\u2019ll search for you.')
+      ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Dice event link (optional)'),
+        h('input', { type: 'url', value: diceUrl, onChange: (e) => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' }),
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
@@ -1426,13 +1450,14 @@ function EditShowModal({ show, onClose, onSave }) {
   const [venue, setVenue] = useState(show?.venue || '');
   const [note, setNote] = useState(show?.note || '');
   const [crowdvoltUrl, setCrowdvoltUrl] = useState(show?.crowdvolt_url || '');
+  const [diceUrl, setDiceUrl] = useState(show?.dice_url || '');
   const [saving, setSaving] = useState(false);
   if (!show) return null;
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
-    await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null, crowdvolt_url: crowdvoltUrl.trim() || null });
+    await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null, crowdvolt_url: crowdvoltUrl.trim() || null, dice_url: diceUrl.trim() || null });
   };
 
   return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
@@ -1458,7 +1483,10 @@ function EditShowModal({ show, onClose, onSave }) {
       h('div', { className: 'field' },
         h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'CrowdVolt event link (optional)'),
         h('input', { type: 'url', value: crowdvoltUrl, onChange: e => setCrowdvoltUrl(e.target.value), placeholder: 'https://www.crowdvolt.com/event/...' }),
-        h('p', { style: { fontSize: 11, color: '#666', marginTop: 5 } }, 'Paste the direct event link if you have one. Otherwise we\u2019ll search for you.')
+      ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Dice event link (optional)'),
+        h('input', { type: 'url', value: diceUrl, onChange: e => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' }),
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
