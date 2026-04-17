@@ -872,7 +872,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           h('div', { style: { flex: 1, minWidth: 0 } },
             h('div', { className: 'show-meta', style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' } },
               h('span', null, formatDate(show.date)),
-              h('span', { className: 'badge ' + (show.past ? 'badge-past' : 'badge-upcoming') }, show.past ? 'past' : 'upcoming'),
+              show.past && h('span', { className: 'badge badge-past' }, 'past'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
               myTicket && h('span', { className: 'badge badge-going' }, myTicket.count > 1 ? `you're going ×${myTicket.count}` : "you're going!"),
             ),
