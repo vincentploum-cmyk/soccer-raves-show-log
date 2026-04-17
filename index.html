@@ -716,8 +716,10 @@ function Hero({ totals }) {
 function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
-    const set = new Set(allShows.map(s => s.venue).filter(Boolean));
-    return [...set].sort();
+    const set = new Set((allShows || []).map(s => s.venue).filter(Boolean));
+    const list = [...set].sort();
+    console.log('[venue filter] found venues:', list);
+    return list;
   }, [allShows]);
 
   return h('div', null,
