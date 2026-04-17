@@ -278,6 +278,7 @@
   .get-tickets-btn:hover { background: rgba(0,0,0,0.11); }
   .get-tickets-btn img { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
   .get-tickets-price { opacity: 0.6; font-weight: 500; }
+  .get-tickets-unavailable { opacity: 0.45; cursor: default; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -823,9 +824,11 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   const [crowdvoltImg, setCrowdvoltImg] = useState(null);
   const [diceImg, setDiceImg] = useState(null);
-  const eventImgUrl = crowdvoltImg || diceImg;
   const [ticketPrice, setTicketPrice] = useState(null);
+  const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
+  const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
+  const eventImgUrl = noTicketsOnCrowdvolt ? (diceImg || crowdvoltImg) : (crowdvoltImg || diceImg);
   useEffect(() => {
     if (!show.crowdvolt_url) return;
     fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
@@ -833,8 +836,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       .then(d => {
         if (d.imageUrl) setCrowdvoltImg(d.imageUrl);
         if (d.price) setTicketPrice(d.price);
+        setCrowdvoltLoaded(true);
       })
-      .catch(() => {});
+      .catch(() => { setCrowdvoltLoaded(true); });
   }, [show.crowdvolt_url]);
   useEffect(() => {
     if (!show.dice_url) return;
@@ -893,14 +897,14 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
             ),
             !show.past && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' } },
               h('a', {
-                className: 'get-tickets-btn',
+                className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
                 href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
                 target: '_blank', rel: 'noopener noreferrer',
               },
                 h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
-                'Get tickets',
-                ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
-                '↗'
+                noTicketsOnCrowdvolt ? 'No tickets available' : 'Get tickets',
+                !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
+                !noTicketsOnCrowdvolt && '↗'
               ),
               h('a', {
                 className: 'get-tickets-btn',
