@@ -84,7 +84,19 @@ export default async function handler(req, res) {
           };
           walk(nextData, 0);
 
-          if (debug) debugInfo = { found };
+          if (debug) {
+            // Also scan raw HTML for any numeric key:value pairs (all escape levels)
+            const raw = nextDataMatch[1];
+            const numericPairs = {};
+            for (const m of raw.matchAll(/[\\]*"(\w+)[\\]*"\s*:\s*[\\]*"?(\d{3,6})[\\]*"?/g)) {
+              const k = m[1], v = parseFloat(m[2]);
+              if (v >= 100 && v <= 99999) {
+                if (!numericPairs[k]) numericPairs[k] = [];
+                if (!numericPairs[k].includes(v)) numericPairs[k].push(v);
+              }
+            }
+            debugInfo = { found, numericPairs };
+          }
 
           // Prefer face_value (in cents), then price
           const faceValues = found.filter(f => f.field === 'face_value' && f.value >= 100 && f.value <= 99999);
