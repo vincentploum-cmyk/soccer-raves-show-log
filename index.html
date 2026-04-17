@@ -459,6 +459,7 @@ function App() {
   };
 
   const currentUser = friends.find((f) => f.id === currentUserId);
+  const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
 
   const switchUser = (id) => {
     setCurrentUserId(id);
@@ -629,19 +630,23 @@ function App() {
     // User picker (below hero)
     h('div', { className: 'user-picker' },
       h(Avatar, { friend: currentUser, size: 28 }),
-      h('span', { className: 'user-picker-label' }, 'you are'),
-      h('select', { value: currentUserId || '', onChange: (e) => {
-        const v = e.target.value;
-        if (v === 'new') { setProfileTarget(false); return; }
-        switchUser(v ? parseInt(v) : null);
-      }},
-        h('option', { value: '' }, '— pick name —'),
-        friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
-        h('option', { value: 'new' }, '＋ Create profile')
-      ),
-      currentUser
-        ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
-        : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
+      isAdmin
+        ? h(React.Fragment, null,
+            h('span', { className: 'user-picker-label' }, 'you are'),
+            h('select', { value: currentUserId || '', onChange: (e) => {
+              const v = e.target.value;
+              if (v === 'new') { setProfileTarget(false); return; }
+              switchUser(v ? parseInt(v) : null);
+            }},
+              h('option', { value: '' }, '— pick name —'),
+              friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
+              h('option', { value: 'new' }, '＋ Create profile')
+            ),
+            currentUser
+              ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
+              : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
+          )
+        : h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'my profile')
     ),
     // Friend roster + profile preview
     friends.length > 0 && h(FriendRoster, {
