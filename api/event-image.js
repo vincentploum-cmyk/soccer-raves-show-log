@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
     const imageUrl = imgMatch?.[1] || null;
 
-    // Price — try JSON-LD structured data first
+    // Price — 1) JSON-LD structured data
     let price = null;
     const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
     for (const block of jsonLdBlocks) {
@@ -43,6 +43,22 @@ export default async function handler(req, res) {
         }
         if (price !== null) break;
       } catch (_) {}
+    }
+
+    // Price — 2) Next.js __NEXT_DATA__ (used by Dice.fm)
+    if (price === null) {
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+      if (nextDataMatch) {
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const json = JSON.stringify(nextData);
+          // Look for faceValue, price, or lowestPrice patterns in the data
+          const priceMatch = json.match(/"faceValue"\s*:\s*(\d+(?:\.\d+)?)/) ||
+                             json.match(/"lowestPrice"\s*:\s*(\d+(?:\.\d+)?)/) ||
+                             json.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/);
+          if (priceMatch) price = parseFloat(priceMatch[1]);
+        } catch (_) {}
+      }
     }
 
     return res.status(200).json({ imageUrl, price });
