@@ -47,43 +47,54 @@ export default async function handler(req, res) {
     }
 
     // Price — 2) Next.js __NEXT_DATA__ (used by Dice.fm)
+    // Walk parsed JSON tree recursively to find price fields
     let debugInfo = null;
     if (price === null) {
       const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
       if (nextDataMatch) {
-        const raw = nextDataMatch[1];
-        // Search raw script for amount values (handles both escaped and unescaped quotes)
-        // Dice stores prices in cents, 3-6 digits (100 = $1, 99999 = $999.99)
-        const amountMatches = [
-          // \"amount_raised\":\"6500\" (doubly-escaped, nested JSON string — Dice.fm format)
-          ...[...raw.matchAll(/\\"amount_raised\\"\s*:\s*\\"(\d+)\\"/g)].map(m => parseFloat(m[1])),
-          // "amount_raised":"6500" or "amount_raised":6500 (top-level)
-          ...[...raw.matchAll(/"amount_raised"\s*:\s*"?(\d+)"?/g)].map(m => parseFloat(m[1])),
-          // \"amount\":\"6500\" or \"amount\":2927 (other escaped amount fields)
-          ...[...raw.matchAll(/\\"amount\\"\s*:\s*\\"(\d+)\\"/g)].map(m => parseFloat(m[1])),
-          ...[...raw.matchAll(/\\"amount\\"\s*:\s*(\d+)(?=[,}\]\s\\"])/g)].map(m => parseFloat(m[1])),
-        ].filter(p => !isNaN(p) && p >= 100 && p <= 99999);
-        if (debug) {
-          debugInfo = [];
-          const getSnippets = (keyword, len = 50) => {
-            const snips = [];
-            let idx = 0;
-            while ((idx = raw.indexOf(keyword, idx)) !== -1) {
-              snips.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + len)));
-              idx += keyword.length;
+        try {
+          const nextData = JSON.parse(nextDataMatch[1]);
+          const priceFields = ['face_value', 'price', 'total_price', 'min_price', 'from_price', 'sale_price'];
+          const found = [];
+
+          // Recursively walk the object; nested JSON strings are re-parsed
+          const walk = (val, depth) => {
+            if (depth > 20) return;
+            if (typeof val === 'string') {
+              // Re-parse nested JSON strings (Dice wraps data inside stringified JSON)
+              if (val.startsWith('{') || val.startsWith('[')) {
+                try { walk(JSON.parse(val), depth + 1); } catch (_) {}
+              }
+              return;
             }
-            return snips.slice(0, 8);
+            if (typeof val === 'number') return;
+            if (Array.isArray(val)) { val.forEach(v => walk(v, depth + 1)); return; }
+            if (val && typeof val === 'object') {
+              for (const [k, v] of Object.entries(val)) {
+                if (priceFields.includes(k) && typeof v === 'number' && v > 0) {
+                  found.push({ field: k, value: v });
+                }
+                // Also catch string-encoded numbers
+                if (priceFields.includes(k) && typeof v === 'string' && /^\d+$/.test(v)) {
+                  found.push({ field: k, value: parseFloat(v) });
+                }
+                walk(v, depth + 1);
+              }
+            }
           };
-          debugInfo.push({
-            amountMatches,
-            cost: getSnippets('cost', 60),
-            ticket_type_id: getSnippets('ticket_type_id', 120),
-            face_value: getSnippets('face_value'),
-            min_price: getSnippets('min_price'),
-            from_price: getSnippets('from_price'),
-          });
-        }
-        if (amountMatches.length) price = Math.min(...amountMatches) / 100;
+          walk(nextData, 0);
+
+          if (debug) debugInfo = { found };
+
+          // Prefer face_value (in cents), then price
+          const faceValues = found.filter(f => f.field === 'face_value' && f.value >= 100 && f.value <= 99999);
+          if (faceValues.length) {
+            price = Math.min(...faceValues.map(f => f.value)) / 100;
+          } else {
+            const prices = found.filter(f => f.value >= 100 && f.value <= 99999);
+            if (prices.length) price = Math.min(...prices.map(f => f.value)) / 100;
+          }
+        } catch (_) {}
       }
     }
 
