@@ -821,7 +821,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [eventImgUrl, setEventImgUrl] = useState(null);
+  const [crowdvoltImg, setCrowdvoltImg] = useState(null);
+  const [diceImg, setDiceImg] = useState(null);
+  const eventImgUrl = crowdvoltImg || diceImg;
   const [ticketPrice, setTicketPrice] = useState(null);
   const [dicePrice, setDicePrice] = useState(null);
   useEffect(() => {
@@ -829,7 +831,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
       .then(r => r.json())
       .then(d => {
-        if (d.imageUrl) setEventImgUrl(d.imageUrl);
+        if (d.imageUrl) setCrowdvoltImg(d.imageUrl);
         if (d.price) setTicketPrice(d.price);
       })
       .catch(() => {});
@@ -838,7 +840,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     if (!show.dice_url) return;
     fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
       .then(r => r.json())
-      .then(d => { if (d.price) setDicePrice(d.price); })
+      .then(d => {
+        if (d.imageUrl) setDiceImg(d.imageUrl);
+        if (d.price) setDicePrice(d.price);
+      })
       .catch(() => {});
   }, [show.dice_url]);
 
