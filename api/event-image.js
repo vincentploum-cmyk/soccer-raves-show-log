@@ -55,11 +55,17 @@ export default async function handler(req, res) {
         // Search raw script for amount values (handles both escaped and unescaped quotes)
         // Dice stores prices in cents, 3-6 digits (100 = $1, 99999 = $999.99)
         const amountMatches = [
-          ...[...raw.matchAll(/\\"amount\\"\s*:\s*\\"(\d{3,6})\\"/g)].map(m => parseFloat(m[1])),
-          ...[...raw.matchAll(/\\"amount\\"\s*:\s*(\d{3,6})(?=[,}\s\\])/g)].map(m => parseFloat(m[1])),
-          ...[...raw.matchAll(/"amount"\s*:\s*"(\d{3,6})"/g)].map(m => parseFloat(m[1])),
-          ...[...raw.matchAll(/"amount"\s*:\s*(\d{3,6})(?=[,}\s])/g)].map(m => parseFloat(m[1])),
-        ].filter(p => !isNaN(p));
+          // "amount":2927 (number, any terminator)
+          ...[...raw.matchAll(/"amount"\s*:\s*(\d+)(?=[,}\]\s\\":])/g)].map(m => parseFloat(m[1])),
+          // "amount":"6500" (plain string)
+          ...[...raw.matchAll(/"amount"\s*:\s*"(\d+)"/g)].map(m => parseFloat(m[1])),
+          // "amount":"\"6500\"" (string with embedded escaped quotes)
+          ...[...raw.matchAll(/"amount"\s*:\s*"\\"(\d+)\\""/g)].map(m => parseFloat(m[1])),
+          // \"amount\":2927 (escaped key, nested JSON)
+          ...[...raw.matchAll(/\\"amount\\"\s*:\s*(\d+)(?=[,}\]\s\\":])/g)].map(m => parseFloat(m[1])),
+          // \"amount\":\"6500\" (escaped key + escaped string, nested JSON)
+          ...[...raw.matchAll(/\\"amount\\"\s*:\s*\\"(\d+)\\"/g)].map(m => parseFloat(m[1])),
+        ].filter(p => !isNaN(p) && p >= 100 && p <= 99999);
         if (debug) {
           try {
             const json = JSON.stringify(JSON.parse(raw));
