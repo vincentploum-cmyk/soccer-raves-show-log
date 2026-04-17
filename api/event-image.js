@@ -77,9 +77,11 @@ export default async function handler(req, res) {
           debugInfo.push({
             amountMatches,
             face_value: getSnippets('face_value'),
-            price_snips: getSnippets('"price"'),
-            total_price: getSnippets('total_price'),
-            amount_snips: getSnippets('amount'),
+            min_price: getSnippets('min_price'),
+            from_price: getSnippets('from_price'),
+            ticket_types: getSnippets('ticket_type'),
+            sale_price: getSnippets('sale_price'),
+            base_price: getSnippets('base_price'),
           });
         }
         if (amountMatches.length) price = Math.min(...amountMatches) / 100;
