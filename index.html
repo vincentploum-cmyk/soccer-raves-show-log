@@ -849,14 +849,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           friend.avatar_url && h('img', { src: friend.avatar_url, style: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } }),
           friend.name, isMe && !show.past ? ' ✓' : null, h('span', { className: 'chip-count' }, t.count));
       }),
-      !show.past && currentUser && h('button', {
+      !show.past && currentUser && !goingFriendIds.has(currentUser.id) && h('button', {
         className: 'chip chip-add',
-        onClick: () => {
-          const other = nonGoing[0];
-          if (!other) return;
-          onEditChip(show.id, other.id);
-        }
-      }, '+ add a friend')
+        onClick: () => onEditChip(show.id, currentUser.id),
+      }, '+ add tickets')
     ),
     // Reactions (past only)
     show.past && h('div', { className: 'reactions' },
