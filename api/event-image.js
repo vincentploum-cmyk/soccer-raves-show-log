@@ -3,17 +3,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { url } = req.query;
+  const { url, debug } = req.query;
   if (!url) return res.status(400).json({ error: 'Missing url parameter' });
 
   try {
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SoccerRaves/1.0)' },
       redirect: 'follow',
     });
     if (!response.ok) return res.status(200).json({ imageUrl: null, price: null });
@@ -52,22 +47,28 @@ export default async function handler(req, res) {
     }
 
     // Price — 2) Next.js __NEXT_DATA__ (used by Dice.fm)
+    let debugInfo = null;
     if (price === null) {
       const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
       if (nextDataMatch) {
         try {
           const nextData = JSON.parse(nextDataMatch[1]);
           const json = JSON.stringify(nextData);
-          // Look for faceValue, price, or lowestPrice patterns in the data
+          if (debug) {
+            // Extract all numeric values near price-related keys for inspection
+            const priceKeys = [...json.matchAll(/"(price|faceValue|lowestPrice|amount|cost|fee|total)[^"]*"\s*:\s*([^,}\]]+)/gi)];
+            debugInfo = priceKeys.slice(0, 20).map(m => ({ key: m[1], val: m[2].trim() }));
+          }
           const priceMatch = json.match(/"faceValue"\s*:\s*(\d+(?:\.\d+)?)/) ||
                              json.match(/"lowestPrice"\s*:\s*(\d+(?:\.\d+)?)/) ||
+                             json.match(/"totalPrice"\s*:\s*(\d+(?:\.\d+)?)/) ||
                              json.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/);
           if (priceMatch) price = parseFloat(priceMatch[1]);
         } catch (_) {}
       }
     }
 
-    return res.status(200).json({ imageUrl, price });
+    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, htmlLen: html.length } : {}) });
   } catch (err) {
     return res.status(200).json({ imageUrl: null, price: null, error: err.message });
   }
