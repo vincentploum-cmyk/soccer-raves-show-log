@@ -8,7 +8,12 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SoccerRaves/1.0)' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+      },
       redirect: 'follow',
     });
     if (!response.ok) return res.status(200).json({ imageUrl: null, price: null });
@@ -38,7 +43,8 @@ export default async function handler(req, res) {
           const offers = node.offers;
           if (!offers) continue;
           const list = Array.isArray(offers) ? offers : [offers];
-          const prices = list.map(o => parseFloat(o.price || o.lowPrice)).filter(p => !isNaN(p) && p > 0);
+          const available = list.filter(o => !o.availability || o.availability.toString().toLowerCase().includes('instock'));
+          const prices = available.map(o => parseFloat(o.price || o.lowPrice)).filter(p => !isNaN(p) && p > 0);
           if (prices.length) { price = Math.min(...prices); break; }
         }
         if (price !== null) break;
