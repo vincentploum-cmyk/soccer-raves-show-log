@@ -9,8 +9,15 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SoccerRaves/1.0)' },
+      redirect: 'follow',
     });
     if (!response.ok) return res.status(200).json({ imageUrl: null, price: null });
+
+    // If we were redirected away from the requested URL the event page doesn't exist
+    const finalUrl = response.url;
+    const requestedPath = new URL(url).pathname.replace(/\/$/, '');
+    const finalPath = new URL(finalUrl).pathname.replace(/\/$/, '');
+    if (requestedPath !== finalPath) return res.status(200).json({ imageUrl: null, price: null });
 
     const html = await response.text();
 
