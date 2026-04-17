@@ -107,12 +107,17 @@ export default async function handler(req, res) {
             if (prices.length) price = Math.min(...prices.map(f => f.value)) / 100;
           }
 
-          // Fallback: scan raw string for amount_from (Dice "from price" in cents)
+          // Fallback: scan raw string for Dice price fields (in cents)
           if (price === null) {
             const raw = nextDataMatch[1];
-            const amountFromMatches = [...raw.matchAll(/[\\]*"amount_from[\\]*"\s*:\s*[\\]*"?(\d{3,6})[\\]*"?/g)]
-              .map(m => parseFloat(m[1])).filter(p => !isNaN(p) && p >= 100 && p <= 99999);
-            if (amountFromMatches.length) price = Math.min(...amountFromMatches) / 100;
+            const extract = (field) =>
+              [...raw.matchAll(new RegExp(`[\\\\]*"${field}[\\\\]*"\\s*:\\s*[\\\\]*"?(\\d{3,6})[\\\\]*"?`, 'g'))]
+                .map(m => parseFloat(m[1])).filter(p => !isNaN(p) && p >= 100 && p <= 99999);
+            // amount_from = "from" price; amount = ticket amount (both in cents)
+            const fromMatches = extract('amount_from');
+            const amountMatches = extract('amount');
+            const candidates = fromMatches.length ? fromMatches : amountMatches;
+            if (candidates.length) price = Math.min(...candidates) / 100;
           }
         } catch (_) {}
       }
