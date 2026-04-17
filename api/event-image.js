@@ -29,6 +29,7 @@ export default async function handler(req, res) {
 
     // Price — 1) JSON-LD structured data
     let price = null;
+    let jsonLdDebug = null;
     const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
     for (const block of jsonLdBlocks) {
       try {
@@ -38,6 +39,7 @@ export default async function handler(req, res) {
           const offers = node.offers;
           if (!offers) continue;
           const list = Array.isArray(offers) ? offers : [offers];
+          if (debug) jsonLdDebug = list.map(o => ({ price: o.price, lowPrice: o.lowPrice, availability: o.availability }));
           const available = list.filter(o => !o.availability || o.availability.toString().toLowerCase().includes('instock'));
           const prices = available.map(o => parseFloat(o.price || o.lowPrice)).filter(p => !isNaN(p) && p > 0);
           if (prices.length) { price = Math.min(...prices); break; }
@@ -123,7 +125,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, htmlLen: html.length } : {}) });
+    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, jsonLdDebug, htmlLen: html.length } : {}) });
   } catch (err) {
     return res.status(200).json({ imageUrl: null, price: null, error: err.message });
   }
