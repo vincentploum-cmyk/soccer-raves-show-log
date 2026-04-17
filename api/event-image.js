@@ -59,11 +59,17 @@ export default async function handler(req, res) {
             const priceKeys = [...json.matchAll(/"(price|faceValue|lowestPrice|amount|cost|fee|total)[^"]*"\s*:\s*([^,}\]]+)/gi)];
             debugInfo = priceKeys.slice(0, 20).map(m => ({ key: m[1], val: m[2].trim() }));
           }
-          const priceMatch = json.match(/"faceValue"\s*:\s*(\d+(?:\.\d+)?)/) ||
-                             json.match(/"lowestPrice"\s*:\s*(\d+(?:\.\d+)?)/) ||
-                             json.match(/"totalPrice"\s*:\s*(\d+(?:\.\d+)?)/) ||
-                             json.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/);
-          if (priceMatch) price = parseFloat(priceMatch[1]);
+          // Dice stores prices in cents, possibly as quoted strings
+          const amountMatches = [...json.matchAll(/"amount"\s*:\s*"?(\d+)"?/g)]
+            .map(m => parseFloat(m[1]))
+            .filter(p => p > 0);
+          if (amountMatches.length) {
+            price = Math.min(...amountMatches) / 100;
+          } else {
+            const priceMatch = json.match(/"faceValue"\s*:\s*"?(\d+)"?/) ||
+                               json.match(/"lowestPrice"\s*:\s*"?(\d+)"?/);
+            if (priceMatch) price = parseFloat(priceMatch[1]) / 100;
+          }
         } catch (_) {}
       }
     }
