@@ -65,14 +65,22 @@ export default async function handler(req, res) {
         ].filter(p => !isNaN(p) && p >= 100 && p <= 99999);
         if (debug) {
           debugInfo = [];
-          // Show raw snippets around every "amount" occurrence
-          const snippets = [];
-          let idx = 0;
-          while ((idx = raw.indexOf('amount', idx)) !== -1) {
-            snippets.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + 30)));
-            idx += 6;
-          }
-          debugInfo.push({ amountSnippets: snippets.slice(0, 10), amountMatches });
+          const getSnippets = (keyword) => {
+            const snips = [];
+            let idx = 0;
+            while ((idx = raw.indexOf(keyword, idx)) !== -1) {
+              snips.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + 40)));
+              idx += keyword.length;
+            }
+            return snips.slice(0, 8);
+          };
+          debugInfo.push({
+            amountMatches,
+            face_value: getSnippets('face_value'),
+            price_snips: getSnippets('"price"'),
+            total_price: getSnippets('total_price'),
+            amount_snips: getSnippets('amount'),
+          });
         }
         if (amountMatches.length) price = Math.min(...amountMatches) / 100;
       }
