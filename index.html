@@ -970,7 +970,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       )
     ),
     // Ticket buttons
-    !show.past && h('div', { style: { display: 'flex', gap: 4, justifyContent: 'flex-end', marginTop: 8 } },
+    !show.past && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', marginTop: 8 } },
       h('a', {
         className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
         href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
