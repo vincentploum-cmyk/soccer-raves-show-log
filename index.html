@@ -902,7 +902,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
                 target: '_blank', rel: 'noopener noreferrer',
               },
                 h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
-                noTicketsOnCrowdvolt ? 'No tickets available' : 'Get tickets',
+                noTicketsOnCrowdvolt ? 'No tickets available' : 'Crowdvolt',
                 !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
                 !noTicketsOnCrowdvolt && '↗'
               ),
