@@ -978,7 +978,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       },
         h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
         noTicketsOnCrowdvolt ? 'No tickets available' : 'Crowdvolt',
-        !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
+        !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)} excl. fees`),
       ),
       h('a', {
         className: 'get-tickets-btn',
