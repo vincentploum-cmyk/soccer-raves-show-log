@@ -979,7 +979,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
         noTicketsOnCrowdvolt ? 'No tickets available' : 'Crowdvolt',
         !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
-        !noTicketsOnCrowdvolt && '↗'
       ),
       h('a', {
         className: 'get-tickets-btn',
@@ -989,7 +988,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         h('img', { src: 'https://dice.fm/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
         'Dice',
         dicePrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
-        '↗'
       )
     ),
     // Actions row — tiny, unobtrusive
