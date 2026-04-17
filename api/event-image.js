@@ -51,26 +51,25 @@ export default async function handler(req, res) {
     if (price === null) {
       const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
       if (nextDataMatch) {
-        try {
-          const nextData = JSON.parse(nextDataMatch[1]);
-          const json = JSON.stringify(nextData);
-          if (debug) {
-            // Extract all numeric values near price-related keys for inspection
+        const raw = nextDataMatch[1];
+        // Search raw script for amount values (handles both escaped and unescaped quotes)
+        // Dice stores prices in cents, 3-6 digits (100 = $1, 99999 = $999.99)
+        const amountMatches = [
+          ...[...raw.matchAll(/\\"amount\\"\s*:\s*\\"(\d{3,6})\\"/g)].map(m => parseFloat(m[1])),
+          ...[...raw.matchAll(/\\"amount\\"\s*:\s*(\d{3,6})(?=[,}\s\\])/g)].map(m => parseFloat(m[1])),
+          ...[...raw.matchAll(/"amount"\s*:\s*"(\d{3,6})"/g)].map(m => parseFloat(m[1])),
+          ...[...raw.matchAll(/"amount"\s*:\s*(\d{3,6})(?=[,}\s])/g)].map(m => parseFloat(m[1])),
+        ].filter(p => !isNaN(p));
+        if (debug) {
+          try {
+            const json = JSON.stringify(JSON.parse(raw));
             const priceKeys = [...json.matchAll(/"(price|faceValue|lowestPrice|amount|cost|fee|total)[^"]*"\s*:\s*([^,}\]]+)/gi)];
             debugInfo = priceKeys.slice(0, 20).map(m => ({ key: m[1], val: m[2].trim() }));
-          }
-          // Dice stores prices in cents, possibly as quoted strings
-          const amountMatches = [...json.matchAll(/"amount"\s*:\s*"?(\d+)"?/g)]
-            .map(m => parseFloat(m[1]))
-            .filter(p => p > 0);
-          if (amountMatches.length) {
-            price = Math.min(...amountMatches) / 100;
-          } else {
-            const priceMatch = json.match(/"faceValue"\s*:\s*"?(\d+)"?/) ||
-                               json.match(/"lowestPrice"\s*:\s*"?(\d+)"?/);
-            if (priceMatch) price = parseFloat(priceMatch[1]) / 100;
-          }
-        } catch (_) {}
+          } catch (_) {}
+          debugInfo = debugInfo || [];
+          debugInfo.push({ amountMatches });
+        }
+        if (amountMatches.length) price = Math.min(...amountMatches) / 100;
       }
     }
 
