@@ -67,13 +67,15 @@ export default async function handler(req, res) {
           ...[...raw.matchAll(/\\"amount\\"\s*:\s*\\"(\d+)\\"/g)].map(m => parseFloat(m[1])),
         ].filter(p => !isNaN(p) && p >= 100 && p <= 99999);
         if (debug) {
-          try {
-            const json = JSON.stringify(JSON.parse(raw));
-            const priceKeys = [...json.matchAll(/"(price|faceValue|lowestPrice|amount|cost|fee|total)[^"]*"\s*:\s*([^,}\]]+)/gi)];
-            debugInfo = priceKeys.slice(0, 20).map(m => ({ key: m[1], val: m[2].trim() }));
-          } catch (_) {}
-          debugInfo = debugInfo || [];
-          debugInfo.push({ amountMatches });
+          debugInfo = [];
+          // Show raw snippets around every "amount" occurrence
+          const snippets = [];
+          let idx = 0;
+          while ((idx = raw.indexOf('amount', idx)) !== -1) {
+            snippets.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + 30)));
+            idx += 6;
+          }
+          debugInfo.push({ amountSnippets: snippets.slice(0, 10), amountMatches });
         }
         if (amountMatches.length) price = Math.min(...amountMatches) / 100;
       }
