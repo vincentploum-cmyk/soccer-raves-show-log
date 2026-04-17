@@ -65,23 +65,22 @@ export default async function handler(req, res) {
         ].filter(p => !isNaN(p) && p >= 100 && p <= 99999);
         if (debug) {
           debugInfo = [];
-          const getSnippets = (keyword) => {
+          const getSnippets = (keyword, len = 50) => {
             const snips = [];
             let idx = 0;
             while ((idx = raw.indexOf(keyword, idx)) !== -1) {
-              snips.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + 40)));
+              snips.push(JSON.stringify(raw.slice(Math.max(0, idx - 5), idx + len)));
               idx += keyword.length;
             }
             return snips.slice(0, 8);
           };
           debugInfo.push({
             amountMatches,
+            cost: getSnippets('cost', 60),
+            ticket_type_id: getSnippets('ticket_type_id', 120),
             face_value: getSnippets('face_value'),
             min_price: getSnippets('min_price'),
             from_price: getSnippets('from_price'),
-            ticket_types: getSnippets('ticket_type'),
-            sale_price: getSnippets('sale_price'),
-            base_price: getSnippets('base_price'),
           });
         }
         if (amountMatches.length) price = Math.min(...amountMatches) / 100;
