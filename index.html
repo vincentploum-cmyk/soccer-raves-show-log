@@ -897,9 +897,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
                 ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
                 '↗'
               ),
-              show.dice_url && h('a', {
+              h('a', {
                 className: 'get-tickets-btn',
-                href: show.dice_url,
+                href: show.dice_url || `https://dice.fm/browse?q=${encodeURIComponent(show.artist || '')}`,
                 target: '_blank', rel: 'noopener noreferrer',
               },
                 h('img', { src: 'https://dice.fm/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
