@@ -212,6 +212,13 @@
   .field { display: block; margin-bottom: 14px; }
   .field-label { display: block; font-size: 10px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; color: #666; font-weight: 600; margin-bottom: 6px; }
 
+  /* Welcome modal */
+  .welcome-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 20px 0; }
+  .welcome-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 10px; border-radius: 14px; border: 2px solid #f0f0f0; background: #fafafa; cursor: pointer; transition: border-color 0.15s, background 0.15s; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; color: #0F0F0F; }
+  .welcome-card:hover { border-color: var(--purple); background: rgba(108,60,255,0.04); }
+  .welcome-new { border-style: dashed; color: #999; font-weight: 500; }
+  .welcome-new:hover { border-color: var(--purple); color: var(--purple); background: rgba(108,60,255,0.04); }
+
   .stepper { display: flex; align-items: center; justify-content: space-between; padding: 18px; background: rgba(0,0,0,0.03); border-radius: 14px; margin: 16px 0; border: none; }
   .stepper-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.08); border: none; color: #0F0F0F; font-size: 20px; font-weight: 700; transition: background 0.15s; }
   .stepper-btn:hover { background: rgba(0,0,0,0.14); }
@@ -357,6 +364,31 @@ function useToast() {
   const show = useCallback((m) => { setMsg(m); setTimeout(() => setMsg(null), 2500); }, []);
   const toastEl = msg ? h('div', { className: 'toast' }, msg) : null;
   return { show, toastEl };
+}
+
+// ===== Welcome modal =====
+function WelcomeModal({ friends, onPick, onNew }) {
+  return h('div', { className: 'modal-overlay' },
+    h('div', { className: 'modal' },
+      h('p', { className: 'modal-sub' }, 'welcome'),
+      h('h2', { className: 'modal-title' }, "Who are you?"),
+      h('p', { style: { fontSize: 13, color: '#666', marginTop: 6 } }, "Pick your name to get started. We'll remember you on this device."),
+      h('div', { className: 'welcome-grid' },
+        friends.map(f => h('button', {
+          key: f.id,
+          className: 'welcome-card',
+          onClick: () => onPick(f.id),
+        },
+          h(Avatar, { friend: f, size: 44 }),
+          f.name,
+        )),
+        h('button', { className: 'welcome-card welcome-new', onClick: onNew },
+          h('div', { style: { fontSize: 28, lineHeight: 1 } }, '+'),
+          "I'm new here",
+        ),
+      ),
+    ),
+  );
 }
 
 // ===== Root App =====
@@ -577,6 +609,19 @@ function App() {
   };
 
   if (loading) return h('div', { className: 'loading' }, 'loading');
+
+  if (!currentUserId && friends.length > 0) {
+    if (profileTarget === false) return h(ProfileModal, {
+      friend: null,
+      onClose: () => setProfileTarget(null),
+      onSave: saveFriendProfile,
+    });
+    return h(WelcomeModal, {
+      friends,
+      onPick: (id) => switchUser(id),
+      onNew: () => setProfileTarget(false),
+    });
+  }
 
   return h('div', null,
     // Hero
