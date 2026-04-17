@@ -38,12 +38,6 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    // Fallback: scan for "$XX" patterns near "ticket" keyword
-    if (price === null) {
-      const priceMatches = [...html.matchAll(/\$\s*(\d+(?:\.\d{1,2})?)/g)].map(m => parseFloat(m[1])).filter(p => p > 0 && p < 10000);
-      if (priceMatches.length) price = Math.min(...priceMatches);
-    }
-
     return res.status(200).json({ imageUrl, price });
   } catch (err) {
     return res.status(200).json({ imageUrl: null, price: null, error: err.message });
