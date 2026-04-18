@@ -757,6 +757,7 @@ function App() {
       h('div', { className: 'tabs', style: { margin: 0, borderTop: '1px solid rgba(0,0,0,0.06)' } },
         h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'All shows'),
         h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'My tickets'),
+        h('button', { className: 'tab' + (tab === 'leaderboard' ? ' active' : ''), onClick: () => setTab('leaderboard') }, '🏆 Leaderboard'),
       ),
     ), // end header panel
     // Content below panel (events are their own cards, no outer wrapper)
@@ -769,12 +770,14 @@ function App() {
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
       onEditShow: (showId) => setEditShowModal(showId),
+      onAddTickets: (showId) => setAddTicketsModal({ showId, friendId: currentUser?.id }),
     }),
+    tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
       selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
       setSelectedId: setSelectedFriendId,
-      onAddTickets: (friendId) => setAddTicketsModal(friendId),
+      onAddTickets: (friendId) => setAddTicketsModal({ friendId }),
       onEditProfile: (friend) => setProfileTarget(friend),
       onRemoveFriend: removeFriend,
     }),
@@ -807,7 +810,8 @@ function App() {
       },
     }),
     addTicketsModal !== null && h(AddTicketsModal, {
-      friendId: addTicketsModal,
+      friendId: addTicketsModal?.friendId ?? addTicketsModal,
+      showId: addTicketsModal?.showId ?? null,
       friends, shows: showsEnriched, currentUser,
       onClose: () => setAddTicketsModal(null),
       onSave: async (showId, friendId, count) => {
@@ -861,7 +865,54 @@ function Hero({ totals }) {
 }
 
 // ===== Shows view =====
-function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
+// ===== Leaderboard =====
+function LeaderboardView({ friends, shows }) {
+  const years = useMemo(() => {
+    const ys = new Set(shows.map(s => s.date?.slice(0, 4)).filter(Boolean));
+    return ['all', ...[...ys].sort((a, b) => b - a)];
+  }, [shows]);
+  const [year, setYear] = useState(years[1] || 'all'); // default to latest year
+
+  const rows = useMemo(() => {
+    const filtered = year === 'all' ? shows : shows.filter(s => s.date?.startsWith(year));
+    return friends.map(f => {
+      const count = filtered.reduce((n, s) => {
+        const t = s.tickets.find(t => t.friend_id === f.id);
+        return n + (t?.count > 0 ? 1 : 0);
+      }, 0);
+      const tix = filtered.reduce((n, s) => {
+        const t = s.tickets.find(t => t.friend_id === f.id);
+        return n + (t?.count || 0);
+      }, 0);
+      return { friend: f, count, tix };
+    }).sort((a, b) => b.count - a.count || b.tix - a.tix);
+  }, [friends, shows, year]);
+
+  const medals = ['🥇', '🥈', '🥉'];
+
+  return h('div', { style: { marginTop: 16 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+      h('select', { value: year, onChange: e => setYear(e.target.value), style: { width: 'auto' } },
+        years.map(y => h('option', { key: y, value: y }, y === 'all' ? 'All years' : y))
+      )
+    ),
+    rows.map((r, i) =>
+      h('div', { key: r.friend.id, className: 'friend-row', style: { marginBottom: 8, cursor: 'default' } },
+        h('span', { style: { fontSize: 22, width: 32, textAlign: 'center', flexShrink: 0 } }, medals[i] || String(i + 1)),
+        h(Avatar, { friend: r.friend, size: 40 }),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 600, fontSize: 15 } }, r.friend.name),
+          h('div', { style: { fontSize: 12, color: '#999', fontFamily: 'JetBrains Mono, monospace' } },
+            r.count + (r.count === 1 ? ' show' : ' shows') + ' · ' + r.tix + ' tickets')
+        ),
+        h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: i === 0 ? '#B5FF5A' : '#999' } }, r.count)
+      )
+    ),
+    rows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, 'No data yet'))
+  );
+}
+
+function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -902,7 +953,7 @@ function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, o
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -910,7 +961,7 @@ function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, o
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow }) {
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
   const going = show.tickets.filter((t) => t.count > 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
@@ -1017,9 +1068,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         onClick: () => onEditChip(show.id, null),
       }, '+ add tickets')
     ),
-    // Reactions (past only)
-    show.past && h('div', { className: 'reactions' },
-      h('span', { className: 'reactions-label' }, 'how was it?'),
+    // Reactions (all shows)
+    h('div', { className: 'reactions' },
+      h('span', { className: 'reactions-label' }, show.past ? 'how was it?' : 'hype?'),
       h('button', {
         className: 'react-btn up' + (myReaction?.vote === 1 ? ' active' : ''),
         disabled: !currentUser,
@@ -1085,16 +1136,23 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         dicePrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
       )
     ),
-    // Actions row — tiny, unobtrusive
-    currentUser && h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 } },
+    // Bottom row: add tickets (left) + edit/delete (right)
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 } },
       h('button', {
-        onClick: () => onEditShow(show.id),
-        style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
-      }, 'edit'),
-      h('button', {
-        onClick: () => onDeleteShow(show.id),
-        style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
-      }, 'delete')
+        className: 'ghost-btn',
+        style: { fontSize: 12, padding: '5px 12px' },
+        onClick: () => onAddTickets && onAddTickets(show.id),
+      }, '+ Add tickets'),
+      currentUser && h('div', { style: { display: 'flex', gap: 12 } },
+        h('button', {
+          onClick: () => onEditShow(show.id),
+          style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
+        }, 'edit'),
+        h('button', {
+          onClick: () => onDeleteShow(show.id),
+          style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
+        }, 'delete')
+      )
     )
   );
 }
@@ -1541,10 +1599,10 @@ function FriendRow({ show, friendId, friends }) {
 }
 
 // ===== Add tickets modal =====
-function AddTicketsModal({ friendId, friends, shows, currentUser, onClose, onSave }) {
+function AddTicketsModal({ friendId, showId, friends, shows, currentUser, onClose, onSave }) {
   const allShows = [...shows].filter(s => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const [selFriendId, setSelFriendId] = useState(friendId || currentUser?.id || friends[0]?.id);
-  const [selShowId, setSelShowId] = useState(allShows[0]?.id ?? null);
+  const [selShowId, setSelShowId] = useState(showId || allShows[0]?.id ?? null);
   const [count, setCount] = useState(1);
   const [saving, setSaving] = useState(false);
   const selFriend = friends.find(f => f.id === selFriendId);
