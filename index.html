@@ -961,7 +961,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl || show.artist_image_url || null, className: 'artist-photo' }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl || show.artist_image_url || null, className: 'artist-photo', style: { width: 90, height: 90 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
