@@ -706,8 +706,8 @@ function App() {
       friends, currentUser,
       friendId: editModal.friendId,
       onClose: () => setEditModal(null),
-      onSave: async (count, actorId) => {
-        await setTicketCount(editModal.showId, editModal.friendId, count, actorId);
+      onSave: async (count, actorId, friendId) => {
+        await setTicketCount(editModal.showId, friendId ?? editModal.friendId, count, actorId);
         setEditModal(null);
       },
     }),
@@ -1270,12 +1270,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
 
   const submit = async () => {
     setSaving(true);
-    if (isNew && activeFriendId !== friendId) {
-      // Redirect to different friend
-      await onSave(count, actorId);
-    } else {
-      await onSave(count, actorId);
-    }
+    await onSave(count, actorId, activeFriendId);
   };
 
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
