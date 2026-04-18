@@ -1070,9 +1070,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         onClick: () => onEditChip(show.id, null),
       }, '+ add tickets')
     ),
-    // Reactions (all shows)
-    h('div', { className: 'reactions' },
-      h('span', { className: 'reactions-label' }, show.past ? 'how was it?' : 'hype?'),
+    // Reactions (past shows only)
+    show.past && h('div', { className: 'reactions' },
+      h('span', { className: 'reactions-label' }, 'how was it?'),
       h('button', {
         className: 'react-btn up' + (myReaction?.vote === 1 ? ' active' : ''),
         disabled: !currentUser,
