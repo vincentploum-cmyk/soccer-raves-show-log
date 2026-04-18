@@ -869,11 +869,14 @@ function Hero({ totals }) {
 // ===== Shows view =====
 // ===== Leaderboard =====
 function LeaderboardView({ friends, shows }) {
+  const currentYear = new Date().getFullYear();
   const years = useMemo(() => {
     const ys = new Set(shows.map(s => s.date?.slice(0, 4)).filter(Boolean));
+    // Always include last 3 years even if no shows yet
+    [currentYear, currentYear - 1, currentYear - 2].forEach(y => ys.add(String(y)));
     return ['all', ...[...ys].sort((a, b) => b - a)];
   }, [shows]);
-  const [year, setYear] = useState(years[1] || 'all'); // default to latest year
+  const [year, setYear] = useState(String(currentYear));
 
   const rows = useMemo(() => {
     const filtered = year === 'all' ? shows : shows.filter(s => s.date?.startsWith(year));
@@ -893,7 +896,7 @@ function LeaderboardView({ friends, shows }) {
   const medals = ['🥇', '🥈', '🥉'];
 
   return h('div', { style: { marginTop: 16 } },
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, background: 'var(--surface)', borderRadius: 12, padding: '8px 12px' } },
       h('select', { value: year, onChange: e => setYear(e.target.value), style: { width: 'auto' } },
         years.map(y => h('option', { key: y, value: y }, y === 'all' ? 'All years' : y))
       )
