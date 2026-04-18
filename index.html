@@ -116,18 +116,18 @@
   .hero-spotify-badge:hover { background: rgba(0,0,0,0.75); }
 
   /* User picker */
-  .user-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; background: #fff; border-radius: 14px; padding: 8px 14px; }
+  .user-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 0; padding: 10px 16px; }
   .user-picker-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: #999; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
   .user-picker select { background: rgba(0,0,0,0.06); border: none; border-radius: 999px; padding: 6px 14px; font-weight: 600; color: #0F0F0F; cursor: pointer; width: auto; }
 
   /* Tabs */
-  .tabs { display: flex; gap: 0; margin: 16px 0 20px; border-bottom: 1px solid rgba(0,0,0,0.08); clear: both; background: #fff; border-radius: 14px 14px 0 0; padding: 0 4px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid rgba(0,0,0,0.08); clear: both; padding: 0 4px; }
   .tab { padding: 12px 16px; font-size: 14px; color: #666; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; font-weight: 500; }
   .tab:hover { color: #0F0F0F; }
   .tab.active { color: #0F0F0F; font-weight: 700; border-bottom-color: #0F0F0F; }
 
   /* Filter bar */
-  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; background: #fff; border-radius: 14px; padding: 10px 14px; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; padding: 0; }
   .filter-bar > * { flex: 0 0 auto; }
   .filter-bar .search { flex: 1; min-width: 180px; }
   .primary-btn { background: #0F0F0F; color: #fff; padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 999px; letter-spacing: 0.01em; border: none; transition: opacity 0.15s; }
@@ -353,20 +353,6 @@
 </div>
 <div id="root"><div class="loading">loading</div></div>
 
-<script>
-  function isNightEST() {
-    // Get current hour in America/New_York (handles EST/EDT automatically)
-    const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
-    // Night = 21:00–23:59 or 0:00–5:59
-    return h >= 21 || h < 6;
-  }
-  function applyNightMode() {
-    document.documentElement.classList.toggle('night', isNightEST());
-  }
-  applyNightMode();
-  // Re-check every minute so the switch happens automatically
-  setInterval(applyNightMode, 60000);
-</script>
 <script type="importmap">
 {
   "imports": {
@@ -497,6 +483,23 @@ function App() {
   const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', venue: 'all', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
+
+  // Night mode: null = auto (time-based), true = forced night, false = forced day
+  const [nightOverride, setNightOverride] = useState(null);
+  useEffect(() => {
+    function isNightEST() {
+      const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
+      return h >= 21 || h < 6;
+    }
+    const apply = () => {
+      const night = nightOverride !== null ? nightOverride : isNightEST();
+      document.documentElement.classList.toggle('night', night);
+    };
+    apply();
+    const id = setInterval(apply, 60000);
+    return () => clearInterval(id);
+  }, [nightOverride]);
+  const isNight = document.documentElement.classList.contains('night');
 
   // Load + realtime
   useEffect(() => {
@@ -713,41 +716,50 @@ function App() {
   return h('div', null,
     // Hero
     h(Hero, { totals }),
-    // User picker (below hero)
-    h('div', { className: 'user-picker' },
-      h(Avatar, { friend: currentUser, size: 28 }),
-      isAdmin
-        ? h(React.Fragment, null,
-            h('span', { className: 'user-picker-label' }, 'you are'),
-            h('select', { value: currentUserId || '', onChange: (e) => {
-              const v = e.target.value;
-              if (v === 'new') { setProfileTarget(false); return; }
-              switchUser(v ? parseInt(v) : null);
-            }},
-              h('option', { value: '' }, '— pick name —'),
-              friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
-              h('option', { value: 'new' }, '＋ Create profile')
-            ),
-            currentUser
-              ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
-              : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
-          )
-        : h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'my profile')
-    ),
-    // Friend roster + profile preview
-    friends.length > 0 && h(FriendRoster, {
-      friends,
-      viewedFriendId,
-      setViewedFriendId,
-      currentUser,
-      onEditProfile: (f) => setProfileTarget(f),
-    }),
-    // Tabs
-    h('div', { className: 'tabs' },
-      h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'All shows'),
-      h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'My tickets'),
-    ),
-    // Content
+    // Night mode toggle (fixed top-right)
+    h('button', {
+      onClick: () => setNightOverride(prev => prev === null ? !isNight : !prev),
+      title: isNight ? 'Switch to day mode' : 'Switch to night mode',
+      style: { position: 'fixed', top: 14, right: 14, zIndex: 50, width: 36, height: 36, borderRadius: '50%', background: isNight ? '#2a2a3a' : 'rgba(255,255,255,0.9)', border: isNight ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)', fontSize: 18, lineHeight: '36px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', cursor: 'pointer', backdropFilter: 'blur(6px)' }
+    }, isNight ? '☀️' : '🌙'),
+    // Unified white panel: user-picker + roster + tabs + content
+    h('div', { style: { background: 'var(--surface)', borderRadius: 18, overflow: 'hidden', marginBottom: 24 } },
+      // User picker
+      h('div', { className: 'user-picker', style: { borderRadius: 0, borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 0 } },
+        h(Avatar, { friend: currentUser, size: 28 }),
+        isAdmin
+          ? h(React.Fragment, null,
+              h('span', { className: 'user-picker-label' }, 'you are'),
+              h('select', { value: currentUserId || '', onChange: (e) => {
+                const v = e.target.value;
+                if (v === 'new') { setProfileTarget(false); return; }
+                switchUser(v ? parseInt(v) : null);
+              }},
+                h('option', { value: '' }, '— pick name —'),
+                friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
+                h('option', { value: 'new' }, '＋ Create profile')
+              ),
+              currentUser
+                ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
+                : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
+            )
+          : h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'my profile')
+      ),
+      // Friend roster + profile preview
+      friends.length > 0 && h(FriendRoster, {
+        friends,
+        viewedFriendId,
+        setViewedFriendId,
+        currentUser,
+        onEditProfile: (f) => setProfileTarget(f),
+      }),
+      // Tabs
+      h('div', { className: 'tabs', style: { margin: 0, borderRadius: 0, borderTop: '1px solid rgba(0,0,0,0.06)' } },
+        h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'All shows'),
+        h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'My tickets'),
+      ),
+      // Content
+      h('div', { style: { padding: '16px' } },
     tab === 'shows' && h(ShowsView, {
       shows: sorted, allShows: showsEnriched, friends, currentUser,
       filter, setFilter,
@@ -766,6 +778,8 @@ function App() {
       onEditProfile: (friend) => setProfileTarget(friend),
       onRemoveFriend: removeFriend,
     }),
+      ) // end content padding div
+    ), // end unified panel
     // Modals
     addModalOpen && h(AddShowModal, {
       onClose: () => setAddModalOpen(false),
@@ -857,7 +871,7 @@ function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, o
   }, [allShows]);
 
   return h('div', null,
-    h('div', { className: 'filter-bar' },
+    h('div', { className: 'filter-bar', style: { background: 'transparent' } },
       h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
         h('option', { value: 'all' }, 'All years'),
         h('option', { value: '2026' }, '2026'),
@@ -1192,7 +1206,7 @@ function Avatar({ friend, size = 36, style: extraStyle }) {
 function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
-  return h('div', { style: { background: '#fff', borderRadius: 18, padding: '4px 16px 12px', marginBottom: 8 } },
+  return h('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
     h('div', { className: 'friends-roster' },
       friends.map((f) => {
         const isActive = f.id === viewedFriendId;
