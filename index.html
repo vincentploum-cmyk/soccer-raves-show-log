@@ -1604,7 +1604,7 @@ function FriendRow({ show, friendId, friends }) {
 function AddTicketsModal({ friendId, showId, friends, shows, currentUser, onClose, onSave }) {
   const allShows = [...shows].filter(s => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const [selFriendId, setSelFriendId] = useState(friendId || currentUser?.id || friends[0]?.id);
-  const [selShowId, setSelShowId] = useState(showId || allShows[0]?.id ?? null);
+  const [selShowId, setSelShowId] = useState(showId ?? allShows[0]?.id ?? null);
   const [count, setCount] = useState(1);
   const [saving, setSaving] = useState(false);
   const selFriend = friends.find(f => f.id === selFriendId);
