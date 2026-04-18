@@ -1136,7 +1136,7 @@ function Avatar({ friend, size = 36, style: extraStyle }) {
 function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
-  return h('div', null,
+  return h('div', { style: { background: '#fff', borderRadius: 18, padding: '4px 16px 12px', marginBottom: 8 } },
     h('div', { className: 'friends-roster' },
       friends.map((f) => {
         const isActive = f.id === viewedFriendId;
