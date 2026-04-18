@@ -1374,30 +1374,75 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
     ),
     upcoming.length > 0 && h('div', { className: 'section-divider' }, 'Upcoming'),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
-      upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id })),
+      upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
     ),
     past.length > 0 && h('div', { className: 'section-divider' }, 'Past'),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
-      past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id })),
+      past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
     ),
     myShows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, friend.name + ' has no shows yet'))
   );
 }
-function FriendRow({ show, friendId }) {
+function FriendRow({ show, friendId, friends }) {
   const t = show.tickets.find((t) => t.friend_id === friendId);
   const myReact = show.reactions.find((r) => r.friend_id === friendId);
-  return h('div', { className: 'friend-row' + (show.past ? ' past-row' : '') },
-    h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
-    h('div', { style: { flex: 1, minWidth: 0 } },
-      h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
-      h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
-        (show.venue || 'TBD') + ' · ' + formatDate(show.date)
-      )
+  const [expanded, setExpanded] = useState(false);
+  const [eventImg, setEventImg] = useState(show.artist_image_url || null);
+  const [ticketPrice, setTicketPrice] = useState(null);
+  const [dicePrice, setDicePrice] = useState(null);
+  const friendsById = Object.fromEntries((friends || []).map((f) => [f.id, f]));
+  const going = show.tickets.filter((t) => t.count > 0);
+
+  useEffect(() => {
+    if (!expanded) return;
+    if (show.crowdvolt_url && !eventImg) {
+      fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
+        .then(r => r.json()).then(d => { if (d.imageUrl) setEventImg(d.imageUrl); if (d.price) setTicketPrice(d.price); }).catch(() => {});
+    }
+    if (show.dice_url) {
+      fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
+        .then(r => r.json()).then(d => { if (d.imageUrl && !eventImg) setEventImg(d.imageUrl); if (d.price) setDicePrice(d.price); }).catch(() => {});
+    }
+  }, [expanded]);
+
+  return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImg, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
+        h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
+          (show.venue || 'TBD') + ' · ' + formatDate(show.date)
+        )
+      ),
+      myReact && h('span', { style: { fontSize: 14 } }, myReact.vote === 1 ? '👍' : '👎'),
+      h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix'),
+      h('span', { style: { fontSize: 12, color: '#999', marginLeft: 4 } }, expanded ? '▲' : '▼'),
     ),
-    myReact && h('span', {
-      style: { fontSize: 14, color: myReact.vote === 1 ? 'var(--lime)' : 'var(--red)' }
-    }, myReact.vote === 1 ? '👍' : '👎'),
-    h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix')
+    expanded && h('div', { style: { marginTop: 12, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 12 }, onClick: e => e.stopPropagation() },
+      eventImg && h('img', { src: eventImg, style: { width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 10 } }),
+      h('div', { style: { fontSize: 12, color: '#666', marginBottom: 8 } },
+        h('strong', null, 'Going: '),
+        going.map(t => { const f = friendsById[t.friend_id]; return f ? f.name + (t.count > 1 ? ` ×${t.count}` : '') : null; }).filter(Boolean).join(', ') || 'No one yet'
+      ),
+      !show.past && (show.crowdvolt_url || show.dice_url) && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
+        show.crowdvolt_url && h('a', {
+          className: 'get-tickets-btn', href: show.crowdvolt_url, target: '_blank', rel: 'noopener noreferrer',
+          onClick: e => e.stopPropagation(),
+        },
+          h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
+          'Crowdvolt',
+          ticketPrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)} excl. fees`),
+        ),
+        show.dice_url && h('a', {
+          className: 'get-tickets-btn', href: show.dice_url, target: '_blank', rel: 'noopener noreferrer',
+          onClick: e => e.stopPropagation(),
+        },
+          h('img', { src: 'https://dice.fm/favicon.ico', alt: '', onError: e => { e.target.style.display = 'none'; } }),
+          'Dice',
+          dicePrice && h('span', { className: 'get-tickets-price' }, `· from $${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
+        ),
+      )
+    )
   );
 }
 
