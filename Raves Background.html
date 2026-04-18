@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-accent="acid" data-pattern="on">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Soccer Raves — Background</title>
+<style>
+:root{
+  --bg: #f3f1ea;
+  --ink: #0a0a0a;
+  /* accents */
+  --acid:    #c6ff3d;
+  --magenta: #ff2e93;
+  --cyan:    #4deaff;
+  --orange:  #ff7a1a;
+  --accent: var(--acid);
+}
+html[data-theme="dark"]{
+  --bg: #0a0a0a;
+  --ink: #f5f5f2;
+}
+html[data-accent="magenta"]{ --accent: var(--magenta); }
+html[data-accent="cyan"]   { --accent: var(--cyan); }
+html[data-accent="orange"] { --accent: var(--orange); }
+
+*{ box-sizing: border-box; }
+html, body { margin:0; padding:0; height:100%; }
+html{ background: var(--bg); }
+body{
+  background: transparent;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  overflow: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* ──────── BACKGROUND LAYER ──────── */
+.bg-pattern{
+  position: fixed; inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* laser sweeps */
+.bg-pattern .lasers{
+  position:absolute; inset:-20% -10%;
+  background:
+    linear-gradient(115deg, transparent 48%, color-mix(in oklab, var(--magenta) 65%, transparent) 49%, color-mix(in oklab, var(--magenta) 65%, transparent) 49.4%, transparent 50%) 0 0 / 100% 100%,
+    linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--cyan)    55%, transparent) 31%, color-mix(in oklab, var(--cyan)    55%, transparent) 31.3%, transparent 32%) 0 0 / 100% 100%,
+    linear-gradient(130deg, transparent 68%, color-mix(in oklab, var(--accent)  70%, transparent) 69%, color-mix(in oklab, var(--accent)  70%, transparent) 69.4%, transparent 70%) 0 0 / 100% 100%,
+    linear-gradient(95deg,  transparent 82%, color-mix(in oklab, var(--magenta) 45%, transparent) 83%, color-mix(in oklab, var(--magenta) 45%, transparent) 83.2%, transparent 84%) 0 0 / 100% 100%,
+    linear-gradient(120deg, transparent 15%, color-mix(in oklab, var(--cyan)    45%, transparent) 16%, color-mix(in oklab, var(--cyan)    45%, transparent) 16.3%, transparent 17%) 0 0 / 100% 100%;
+  filter: blur(.5px);
+  mix-blend-mode: multiply;
+  opacity: .22;
+  transform-origin: left top;
+  animation: sweep 18s ease-in-out infinite alternate;
+}
+html[data-theme="dark"] .bg-pattern .lasers{ mix-blend-mode: screen; opacity: .55; }
+@keyframes sweep{
+  0%   { transform: translate(-2%, 0)   rotate(-1deg); }
+  50%  { transform: translate(2%, -1%)  rotate(1.5deg); }
+  100% { transform: translate(-1%, 1%)  rotate(-.5deg); }
+}
+
+/* scattered soccer balls */
+.bg-pattern .scatter{ position:absolute; inset:0; }
+.bg-pattern .ball{
+  position:absolute;
+  background-image: url("assets/soccer-ball.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: .32;
+  filter: contrast(1.05);
+}
+html[data-theme="dark"] .bg-pattern .ball{
+  opacity: .35;
+  filter: invert(1) contrast(1.05);
+}
+
+html[data-pattern="off"] .bg-pattern{ display:none; }
+
+/* scanlines overlay (subtle) */
+body::before{
+  content:"";
+  position: fixed; inset:0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.035) 0 1px,
+    transparent 1px 3px
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+html[data-theme="dark"] body::before{
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.03) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* tiny control panel (optional, removable) */
+.ctrl{
+  position: fixed; right: 14px; bottom: 14px;
+  z-index: 2;
+  display: flex; gap: 6px;
+  padding: 6px;
+  background: rgba(255,255,255,.65);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+html[data-theme="dark"] .ctrl{
+  background: rgba(0,0,0,.5);
+  border-color: rgba(255,255,255,.12);
+  color: #fff;
+}
+.ctrl button{
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ctrl button.on{ background: var(--accent); color:#0a0a0a; }
+.ctrl .sw{ display:inline-flex; gap: 2px; }
+</style>
+</head>
+<body>
+
+<!-- background layer -->
+<div class="bg-pattern" aria-hidden="true">
+  <div class="scatter" id="ballScatter"></div>
+  <div class="lasers"></div>
+</div>
+
+<!-- optional controls — delete this block if embedding -->
+<div class="ctrl" aria-label="background controls">
+  <div class="sw">
+    <button data-theme="light" class="on">Light</button>
+    <button data-theme="dark">Dark</button>
+  </div>
+  <div class="sw">
+    <button data-accent="acid" class="on">Acid</button>
+    <button data-accent="magenta">Magenta</button>
+    <button data-accent="cyan">Cyan</button>
+    <button data-accent="orange">Orange</button>
+  </div>
+</div>
+
+<script>
+/* scattered soccer balls — seeded pseudo-random Poisson-ish distribution */
+(function scatterBalls(){
+  const host = document.getElementById('ballScatter');
+  if(!host) return;
+  let seed = 1337;
+  const rand = ()=>{ seed = (seed*9301 + 49297) % 233280; return seed/233280; };
+
+  const render = ()=>{
+    host.innerHTML = '';
+    const W = window.innerWidth, H = Math.max(window.innerHeight, document.body.scrollHeight);
+    const points = [];
+    const minDist = 140;
+    const target = Math.round((W*H) / 42000);
+    let tries = 0;
+    seed = 1337; // stable layout
+    while(points.length < target && tries < target*40){
+      tries++;
+      const x = rand()*W, y = rand()*H;
+      let ok = true;
+      for(const p of points){
+        const dx = p.x-x, dy = p.y-y;
+        if(dx*dx + dy*dy < minDist*minDist){ ok=false; break; }
+      }
+      if(ok) points.push({x,y});
+    }
+    const frag = document.createDocumentFragment();
+    for(const p of points){
+      const size = 40 + Math.floor(rand()*90);
+      const rot  = Math.floor(rand()*360);
+      const tilt = (rand()-0.5)*20;
+      const el = document.createElement('div');
+      el.className = 'ball';
+      el.style.left = (p.x - size/2) + 'px';
+      el.style.top  = (p.y - size/2) + 'px';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.transform = `rotate(${rot}deg) skew(${tilt}deg)`;
+      frag.appendChild(el);
+    }
+    host.appendChild(frag);
+  };
+  render();
+  let t;
+  window.addEventListener('resize', ()=>{ clearTimeout(t); t=setTimeout(render, 120); });
+})();
+
+/* control panel */
+document.querySelectorAll('.ctrl .sw').forEach(sw=>{
+  sw.addEventListener('click', e=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    [...sw.children].forEach(b=> b.classList.remove('on'));
+    btn.classList.add('on');
+    if(btn.dataset.theme)  document.documentElement.dataset.theme  = btn.dataset.theme;
+    if(btn.dataset.accent) document.documentElement.dataset.accent = btn.dataset.accent;
+  });
+});
+</script>
+</body>
+</html>
