@@ -25,7 +25,29 @@
     --danger-bg: #fff5f7;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { min-height: 100vh; background: #FAFAFA; color: #0F0F0F; font-family: 'Space Grotesk', sans-serif; }
+  html, body { min-height: 100vh; background: #f3f1ea; color: #0F0F0F; font-family: 'Space Grotesk', sans-serif; }
+
+  /* ── Background layer (Claude design) ── */
+  .bg-pattern { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
+  .bg-pattern .lasers {
+    position: absolute; inset: -20% -10%;
+    background:
+      linear-gradient(115deg, transparent 48%, color-mix(in oklab, #ff2e93 65%, transparent) 49%, color-mix(in oklab, #ff2e93 65%, transparent) 49.4%, transparent 50%) 0 0/100% 100%,
+      linear-gradient(100deg, transparent 30%, color-mix(in oklab, #4deaff 55%, transparent) 31%, color-mix(in oklab, #4deaff 55%, transparent) 31.3%, transparent 32%) 0 0/100% 100%,
+      linear-gradient(130deg, transparent 68%, color-mix(in oklab, #c6ff3d 70%, transparent) 69%, color-mix(in oklab, #c6ff3d 70%, transparent) 69.4%, transparent 70%) 0 0/100% 100%,
+      linear-gradient(95deg,  transparent 82%, color-mix(in oklab, #ff2e93 45%, transparent) 83%, color-mix(in oklab, #ff2e93 45%, transparent) 83.2%, transparent 84%) 0 0/100% 100%,
+      linear-gradient(120deg, transparent 15%, color-mix(in oklab, #4deaff 45%, transparent) 16%, color-mix(in oklab, #4deaff 45%, transparent) 16.3%, transparent 17%) 0 0/100% 100%;
+    filter: blur(.5px); mix-blend-mode: multiply; opacity: .22;
+    transform-origin: left top;
+    animation: bgSweep 18s ease-in-out infinite alternate;
+  }
+  @keyframes bgSweep {
+    0%   { transform: translate(-2%, 0)  rotate(-1deg); }
+    50%  { transform: translate(2%, -1%) rotate(1.5deg); }
+    100% { transform: translate(-1%, 1%) rotate(-.5deg); }
+  }
+  .bg-pattern .ball { position: absolute; background-image: url('soccer-ball.png'); background-size: contain; background-repeat: no-repeat; opacity: .22; filter: contrast(1.05); }
+  body::before { content: ""; position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0.03) 0 1px, transparent 1px 3px); pointer-events: none; z-index: -1; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
   input, select, textarea { font-family: inherit; color: #0F0F0F; background: rgba(0,0,0,0.04); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; transition: background 0.15s, box-shadow 0.15s; width: 100%; }
   input:focus, select:focus, textarea:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px rgba(0,0,0,0.14); }
@@ -282,6 +304,10 @@
 </style>
 </head>
 <body>
+<div class="bg-pattern" aria-hidden="true">
+  <div class="scatter" id="ballScatter"></div>
+  <div class="lasers"></div>
+</div>
 <div id="root"><div class="loading">loading</div></div>
 
 <script type="importmap">
@@ -1546,6 +1572,40 @@ function EditShowModal({ show, onClose, onSave }) {
 }
 
 createRoot(document.getElementById('root')).render(h(App));
+</script>
+<script>
+(function scatterBalls(){
+  const host = document.getElementById('ballScatter');
+  if (!host) return;
+  let seed = 1337;
+  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const render = () => {
+    host.innerHTML = '';
+    const W = window.innerWidth, H = Math.max(window.innerHeight, document.body.scrollHeight);
+    const points = [], minDist = 140, target = Math.round((W * H) / 42000);
+    let tries = 0;
+    seed = 1337;
+    while (points.length < target && tries < target * 40) {
+      tries++;
+      const x = rand() * W, y = rand() * H;
+      let ok = true;
+      for (const p of points) { const dx = p.x - x, dy = p.y - y; if (dx*dx + dy*dy < minDist*minDist) { ok = false; break; } }
+      if (ok) points.push({ x, y });
+    }
+    const frag = document.createDocumentFragment();
+    for (const p of points) {
+      const size = 40 + Math.floor(rand() * 90), rot = Math.floor(rand() * 360), tilt = (rand() - 0.5) * 20;
+      const el = document.createElement('div');
+      el.className = 'ball';
+      el.style.cssText = `left:${p.x - size/2}px;top:${p.y - size/2}px;width:${size}px;height:${size}px;transform:rotate(${rot}deg) skew(${tilt}deg)`;
+      frag.appendChild(el);
+    }
+    host.appendChild(frag);
+  };
+  render();
+  let t;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 120); });
+})();
 </script>
 </body>
 </html>
