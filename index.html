@@ -23,10 +23,52 @@
     --amber: #ffaa00;
     --red: #ff3d5a;
     --danger-bg: #fff5f7;
+    --html-bg: #f3f1ea;
+    --body-color: #0F0F0F;
+    --card-bg: #fff;
+  }
+  html.night {
+    --html-bg: #0d0d12;
+    --body-color: #e8e8e8;
+    --card-bg: #1a1a24;
+    --surface: #1a1a24;
+    --bg: #0d0d12;
+    --border: rgba(255,255,255,0.08);
+    --border-2: rgba(255,255,255,0.14);
+    --text: #e8e8e8;
+    --text-2: #aaaaaa;
+    --text-3: #666666;
+    --danger-bg: #2a1018;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { background: #f3f1ea; }
-  body { min-height: 100vh; background: transparent; color: #0F0F0F; font-family: 'Space Grotesk', sans-serif; }
+  html { background: var(--html-bg); transition: background 1s; }
+  body { min-height: 100vh; background: transparent; color: var(--body-color); font-family: 'Space Grotesk', sans-serif; transition: color 1s; }
+
+  /* Night-mode overrides for white UI panels */
+  html.night .user-picker,
+  html.night .tabs,
+  html.night .filter-bar,
+  html.night .friends-roster-wrap { background: var(--card-bg) !important; }
+  html.night .profile-card,
+  html.night .profile-preview,
+  html.night .friend-row { background: var(--card-bg) !important; color: var(--text); }
+  html.night .profile-card-name,
+  html.night .profile-card-meta,
+  html.night .roster-chip-name { color: var(--text-2); }
+  html.night .roster-chip.active .roster-chip-name { color: var(--text); }
+  html.night .tab { color: var(--text-2); }
+  html.night .tab.active { color: var(--text); border-bottom-color: var(--lime); }
+  html.night .tabs { border-bottom-color: var(--border); }
+  html.night input, html.night select, html.night textarea { background: rgba(255,255,255,0.07); color: var(--text); }
+  html.night input:focus, html.night select:focus { background: rgba(255,255,255,0.1); box-shadow: 0 0 0 2px rgba(255,255,255,0.14); }
+  html.night option { background: #1a1a24; color: var(--text); }
+  html.night .genre-chip { background: rgba(255,255,255,0.1); color: var(--text-2); }
+  html.night .section-divider { color: var(--text-3); }
+  html.night .section-divider::before, html.night .section-divider::after { background: var(--border); }
+  html.night .empty-state { color: var(--text-3); }
+  html.night .empty-state h3 { color: var(--text-2); }
+  html.night .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.35; }
+  html.night body::before { background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px); }
 
   /* ── Background layer (Claude design) ── */
   .bg-pattern { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
@@ -311,6 +353,20 @@
 </div>
 <div id="root"><div class="loading">loading</div></div>
 
+<script>
+  function isNightEST() {
+    // Get current hour in America/New_York (handles EST/EDT automatically)
+    const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
+    // Night = 21:00–23:59 or 0:00–5:59
+    return h >= 21 || h < 6;
+  }
+  function applyNightMode() {
+    document.documentElement.classList.toggle('night', isNightEST());
+  }
+  applyNightMode();
+  // Re-check every minute so the switch happens automatically
+  setInterval(applyNightMode, 60000);
+</script>
 <script type="importmap">
 {
   "imports": {
