@@ -835,7 +835,7 @@ function App() {
     }),
     showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
       friends,
-      onPick: (id) => { switchUser(id); setShowWelcomeModal(false); },
+      onPick: (id) => { switchUser(id); setTab('shows'); setShowWelcomeModal(false); },
       onNew: () => { setShowWelcomeModal(false); setProfileTarget(false); },
     }),
     toastEl,
