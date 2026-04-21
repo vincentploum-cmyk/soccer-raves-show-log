@@ -1268,13 +1268,18 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
   const rosterRef = React.useRef(null);
-  const onWheel = (e) => {
-    if (!rosterRef.current) return;
-    e.preventDefault();
-    rosterRef.current.scrollLeft += e.deltaY + e.deltaX;
-  };
+  useEffect(() => {
+    const el = rosterRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      e.preventDefault();
+      el.scrollLeft += e.deltaY + e.deltaX;
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
   return h('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
-    h('div', { className: 'friends-roster', ref: rosterRef, onWheel },
+    h('div', { className: 'friends-roster', ref: rosterRef },
       friends.map((f) => {
         const isActive = f.id === viewedFriendId;
         return h('button', {
