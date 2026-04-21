@@ -1291,8 +1291,11 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, []);
+  const scroll = (dir) => { if (rosterRef.current) rosterRef.current.scrollBy({ left: dir * 160, behavior: 'smooth' }); };
   return h('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
-    h('div', { className: 'friends-roster', ref: rosterRef },
+    h('div', { style: { position: 'relative', display: 'flex', alignItems: 'center' } },
+      h('button', { onClick: () => scroll(-1), style: { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0 4px', color: 'var(--text-2)', lineHeight: 1 } }, '‹'),
+      h('div', { className: 'friends-roster', ref: rosterRef },
       friends.map((f) => {
         const isActive = f.id === viewedFriendId;
         return h('button', {
@@ -1304,6 +1307,8 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
           h('span', { className: 'roster-chip-name' }, f.name.split(' ')[0])
         );
       })
+      ),
+      h('button', { onClick: () => scroll(1), style: { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0 4px', color: 'var(--text-2)', lineHeight: 1 } }, '›'),
     ),
     viewed && h('div', { className: 'profile-preview' },
       h(Avatar, { friend: viewed, size: 56 }),
