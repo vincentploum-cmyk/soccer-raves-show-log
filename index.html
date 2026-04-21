@@ -614,6 +614,7 @@ function App() {
 
   const [profileTarget, setProfileTarget] = useState(null); // null=closed, false=new, friend=edit
   const [viewedFriendId, setViewedFriendId] = useState(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
 
   // Mutations
   const saveFriendProfile = async ({ id, name, avatar_url, genres, fav_artist }) => {
@@ -712,18 +713,6 @@ function App() {
 
   if (loading) return h('div', { className: 'loading' }, 'loading');
 
-  if (!currentUserId && friends.length > 0) {
-    if (profileTarget === false) return h(ProfileModal, {
-      friend: null,
-      onClose: () => setProfileTarget(null),
-      onSave: saveFriendProfile,
-    });
-    return h(WelcomeModal, {
-      friends,
-      onPick: (id) => switchUser(id),
-      onNew: () => setProfileTarget(false),
-    });
-  }
 
   return h('div', null,
     // Hero
@@ -843,6 +832,11 @@ function App() {
       friend: profileTarget || null,
       onClose: () => setProfileTarget(null),
       onSave: saveFriendProfile,
+    }),
+    showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
+      friends,
+      onPick: (id) => { switchUser(id); setShowWelcomeModal(false); },
+      onNew: () => { setShowWelcomeModal(false); setProfileTarget(false); },
     }),
     toastEl,
   );
@@ -1273,8 +1267,14 @@ function Avatar({ friend, size = 36, style: extraStyle }) {
 function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
+  const rosterRef = React.useRef(null);
+  const onWheel = (e) => {
+    if (!rosterRef.current) return;
+    e.preventDefault();
+    rosterRef.current.scrollLeft += e.deltaY + e.deltaX;
+  };
   return h('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
-    h('div', { className: 'friends-roster' },
+    h('div', { className: 'friends-roster', ref: rosterRef, onWheel },
       friends.map((f) => {
         const isActive = f.id === viewedFriendId;
         return h('button', {
