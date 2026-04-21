@@ -1251,14 +1251,14 @@ function AddShowModal({ onClose, onSave }) {
 }
 
 // ===== Avatar =====
-function Avatar({ friend, size = 36, style: extraStyle }) {
+function Avatar({ friend, size = 36, style: extraStyle, zoomable = false }) {
   const [zoomed, setZoomed] = useState(false);
   const s = { width: size, height: size, borderRadius: '50%', flexShrink: 0, ...extraStyle };
-  const canZoom = !!friend?.avatar_url;
-  const zoomProps = canZoom ? { onClick: (e) => { e.stopPropagation(); setZoomed(true); }, style: { ...s, objectFit: 'cover', cursor: 'zoom-in' } } : { style: s };
+  const canZoom = zoomable && !!friend?.avatar_url;
+  const clickProps = canZoom ? { onClick: (e) => { e.stopPropagation(); setZoomed(true); }, style: { ...s, objectFit: 'cover', cursor: 'zoom-in' } } : { style: { ...s, objectFit: 'cover' } };
 
   const img = friend?.avatar_url
-    ? h('img', { src: friend.avatar_url, ...zoomProps })
+    ? h('img', { src: friend.avatar_url, ...clickProps })
     : (() => {
         const initials = (friend?.name || '?').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
         const hue = (friend?.name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
@@ -1271,7 +1271,7 @@ function Avatar({ friend, size = 36, style: extraStyle }) {
       onClick: () => setZoomed(false),
       style: { position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', backdropFilter: 'blur(8px)' },
     },
-      h('img', { src: friend.avatar_url, style: { maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.6)', objectFit: 'contain' } })
+      h('img', { src: friend.avatar_url, style: { width: 'min(80vw, 80vh)', height: 'min(80vw, 80vh)', borderRadius: '50%', boxShadow: '0 8px 40px rgba(0,0,0,0.6)', objectFit: 'cover' } })
     ),
   );
 }
@@ -1311,7 +1311,7 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
       h('button', { onClick: () => scroll(1), style: { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0 4px', color: 'var(--text-2)', lineHeight: 1 } }, '›'),
     ),
     viewed && h('div', { className: 'profile-preview' },
-      h(Avatar, { friend: viewed, size: 56 }),
+      h(Avatar, { friend: viewed, size: 56, zoomable: true }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { className: 'profile-card-name' }, viewed.name),
         viewed.fav_artist && h('div', { className: 'profile-card-meta' }, '🎧 ' + viewed.fav_artist),
@@ -1326,6 +1326,88 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
       }, 'Edit profile')
     )
   );
+}
+
+// ===== Circular crop editor =====
+const CROP_SIZE = 200; // px diameter of the crop circle
+
+function CropEditor({ src, onCropChange }) {
+  const [imgNat, setImgNat] = useState(null); // { w, h }
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const drag = useRef(null);
+
+  const onImgLoad = (e) => {
+    const { naturalWidth: w, naturalHeight: h } = e.target;
+    const s = CROP_SIZE / Math.min(w, h);
+    setImgNat({ w, h });
+    setScale(s);
+    setOffset({ x: 0, y: 0 });
+    onCropChange({ offset: { x: 0, y: 0 }, scale: s, imgNat: { w, h } });
+  };
+
+  const clampOffset = (ox, oy, s, nat) => {
+    if (!nat) return { x: ox, y: oy };
+    const maxX = (nat.w * s - CROP_SIZE) / 2;
+    const maxY = (nat.h * s - CROP_SIZE) / 2;
+    return { x: Math.max(-maxX, Math.min(maxX, ox)), y: Math.max(-maxY, Math.min(maxY, oy)) };
+  };
+
+  const startDrag = (cx, cy) => { drag.current = { cx, cy, ox: offset.x, oy: offset.y }; };
+  const moveDrag = (cx, cy) => {
+    if (!drag.current || !imgNat) return;
+    const { cx: sx, cy: sy, ox, oy } = drag.current;
+    const next = clampOffset(ox + cx - sx, oy + cy - sy, scale, imgNat);
+    setOffset(next);
+    onCropChange({ offset: next, scale, imgNat });
+  };
+  const endDrag = () => { drag.current = null; };
+
+  if (!imgNat) {
+    return h('div', { style: { width: CROP_SIZE, height: CROP_SIZE, borderRadius: '50%', background: '#ddd', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#999' } },
+      'loading…',
+      h('img', { src, onLoad: onImgLoad, style: { display: 'none' } }),
+    );
+  }
+
+  const rw = imgNat.w * scale;
+  const rh = imgNat.h * scale;
+  const left = (CROP_SIZE - rw) / 2 + offset.x;
+  const top  = (CROP_SIZE - rh) / 2 + offset.y;
+
+  return h('div', {
+    style: { width: CROP_SIZE, height: CROP_SIZE, borderRadius: '50%', overflow: 'hidden', background: '#ddd', margin: '0 auto', cursor: 'grab', userSelect: 'none', position: 'relative', boxShadow: '0 0 0 3px #B5FF5A' },
+    onMouseDown: (e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); },
+    onMouseMove: (e) => moveDrag(e.clientX, e.clientY),
+    onMouseUp: endDrag, onMouseLeave: endDrag,
+    onTouchStart: (e) => { const t = e.touches[0]; startDrag(t.clientX, t.clientY); },
+    onTouchMove: (e) => { e.preventDefault(); const t = e.touches[0]; moveDrag(t.clientX, t.clientY); },
+    onTouchEnd: endDrag,
+  },
+    h('img', { src, onLoad: onImgLoad, draggable: false, style: { position: 'absolute', width: rw, height: rh, left, top, pointerEvents: 'none' } }),
+  );
+}
+
+function cropImageToBlob(src, cropData, outputSize = 400) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const { offset, scale, imgNat } = cropData;
+      const rw = imgNat.w * scale;
+      const rh = imgNat.h * scale;
+      const left = (CROP_SIZE - rw) / 2 + offset.x;
+      const top  = (CROP_SIZE - rh) / 2 + offset.y;
+      const srcX = -left / scale;
+      const srcY = -top  / scale;
+      const srcS = CROP_SIZE / scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize; canvas.height = outputSize;
+      canvas.getContext('2d').drawImage(img, srcX, srcY, srcS, srcS, 0, 0, outputSize, outputSize);
+      canvas.toBlob(resolve, 'image/jpeg', 0.88);
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 // Resize image file to a JPEG data URL (max 240px) for reliable DB storage
@@ -1354,6 +1436,7 @@ function ProfileModal({ friend, onClose, onSave }) {
   const [name, setName] = useState(friend?.name || '');
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(friend?.avatar_url || '');
+  const [cropData, setCropData] = useState(null);
   const [genres, setGenres] = useState(friend?.genres || []);
   const [favArtist, setFavArtist] = useState(friend?.fav_artist || '');
   const [saving, setSaving] = useState(false);
@@ -1365,9 +1448,11 @@ function ProfileModal({ friend, onClose, onSave }) {
     setSaving(true);
     try {
       let finalAvatarUrl = friend?.avatar_url || null; // default: keep existing
-      if (file) {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const { data: up, error: upErr } = await sb.storage.from('avatars').upload(`${Date.now()}.${ext}`, file, { upsert: true });
+      if (file && previewUrl) {
+        const blob = cropData
+          ? await cropImageToBlob(previewUrl, cropData)
+          : await new Promise((res) => { const c = document.createElement('canvas'); c.width = 400; c.height = 400; const img = new Image(); img.onload = () => { c.getContext('2d').drawImage(img, 0, 0, 400, 400); c.toBlob(res, 'image/jpeg', 0.88); }; img.src = previewUrl; });
+        const { data: up, error: upErr } = await sb.storage.from('avatars').upload(`${Date.now()}.jpg`, blob, { upsert: true, contentType: 'image/jpeg' });
         if (upErr || !up) {
           showToast("Couldn't upload photo — try again");
           return;
@@ -1388,18 +1473,25 @@ function ProfileModal({ friend, onClose, onSave }) {
       h('p', { className: 'modal-sub' }, friend ? 'edit your profile' : 'welcome!'),
       h('h2', { className: 'modal-title', style: { marginBottom: 20 } }, friend ? 'Edit Profile' : 'Create Profile'),
 
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 } },
-        h(Avatar, { friend: { name, avatar_url: previewUrl }, size: 64 }),
-        h('div', { style: { flex: 1 } },
-          h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Photo (optional)'),
-          h('input', {
-            ref: fileInputRef, type: 'file', accept: 'image/*',
-            style: { display: 'none' },
-            onChange: (e) => {
-              const f = e.target.files?.[0];
-              if (f) { setFile(f); setPreviewUrl(URL.createObjectURL(f)); }
-            }
-          }),
+      h('div', { style: { marginBottom: 18 } },
+        h('span', { className: 'field-label', style: { display: 'block', marginBottom: 10, textAlign: 'center' } }, 'Photo (optional)'),
+        file && previewUrl
+          ? h('div', { style: { marginBottom: 10 } },
+              h(CropEditor, { src: previewUrl, onCropChange: setCropData }),
+              h('p', { style: { textAlign: 'center', fontSize: 11, color: '#999', marginTop: 6 } }, 'Drag to reposition')
+            )
+          : h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 10 } },
+              h(Avatar, { friend: { name, avatar_url: previewUrl }, size: 100 })
+            ),
+        h('input', {
+          ref: fileInputRef, type: 'file', accept: 'image/*',
+          style: { display: 'none' },
+          onChange: (e) => {
+            const f = e.target.files?.[0];
+            if (f) { setFile(f); setCropData(null); setPreviewUrl(URL.createObjectURL(f)); }
+          }
+        }),
+        h('div', { style: { display: 'flex', justifyContent: 'center' } },
           h('button', {
             type: 'button', className: 'ghost-btn',
             style: { fontSize: 12, padding: '6px 14px' },
