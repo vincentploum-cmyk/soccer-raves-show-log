@@ -429,12 +429,6 @@ const isPast = (iso) => {
 };
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
-function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  if (imgUrl) {
-    return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'contain', background: '#111' } });
-  }
-  return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
-}
 
 const getManualEventUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
 const setManualEventUrl = (showId, url) => {
@@ -989,34 +983,29 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [crowdvoltImg, setCrowdvoltImg] = useState(null);
-  const [diceImg, setDiceImg] = useState(null);
+  const [eventImgUrl, setEventImgUrl] = useState(null);
   const [ticketPrice, setTicketPrice] = useState(null);
-  const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
-  const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
-  const eventImgUrl = noTicketsOnCrowdvolt ? (diceImg || crowdvoltImg) : (crowdvoltImg || diceImg);
   useEffect(() => {
-    if (!show.crowdvolt_url) return;
-    fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.imageUrl) setCrowdvoltImg(d.imageUrl);
-        if (d.price) setTicketPrice(d.price);
-        setCrowdvoltLoaded(true);
-      })
-      .catch(() => { setCrowdvoltLoaded(true); });
-  }, [show.crowdvolt_url]);
-  useEffect(() => {
-    if (!show.dice_url) return;
-    fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.imageUrl) setDiceImg(d.imageUrl);
-        if (d.price) setDicePrice(d.price);
-      })
-      .catch(() => {});
-  }, [show.dice_url]);
+    if (show.crowdvolt_url) {
+      fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.imageUrl) setEventImgUrl(d.imageUrl);
+          if (d.price) setTicketPrice(d.price);
+        })
+        .catch(() => {});
+    }
+    if (show.dice_url) {
+      fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.imageUrl && !eventImgUrl) setEventImgUrl(d.imageUrl);
+          if (d.price) setDicePrice(d.price);
+        })
+        .catch(() => {});
+    }
+  }, [show.crowdvolt_url, show.dice_url]);
 
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
@@ -1033,7 +1022,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl || show.artist_image_url || null, className: 'artist-photo', style: { width: 90, height: 90 } }),
+      eventImgUrl && h('img', { src: eventImgUrl, className: 'artist-photo', style: { width: 90, height: 90, objectFit: 'contain', background: '#111', borderRadius: 10, flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -1718,7 +1707,7 @@ function FriendRow({ show, friendId, friends }) {
 
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImg, style: { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Bricolage Grotesque', fontWeight: 700, fontSize: 11, flexShrink: 0 } }),
+      eventImg && h('img', { src: eventImg, style: { width: 34, height: 34, borderRadius: 8, objectFit: 'contain', background: '#111', flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
         h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
