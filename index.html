@@ -641,6 +641,9 @@ function App() {
       showToast('Profile saved' + (usedFallback ? ' (name only — run migration for photo)' : ''));
       const merged = data?.length ? data[0] : { name, ...(usedFallback ? {} : { avatar_url, genres, fav_artist }) };
       setFriends(prev => prev.map(f => f.id === id ? { ...f, ...merged } : f));
+      // Mark this user as having visited at least once
+      const visited = JSON.parse(localStorage.getItem('visitedUsers') || '[]');
+      if (!visited.includes(id)) localStorage.setItem('visitedUsers', JSON.stringify([...visited, id]));
     } else {
       showToast('Profile created!');
       setFriends(prev => [...prev, data]);
@@ -835,7 +838,16 @@ function App() {
     }),
     showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
       friends,
-      onPick: (id) => { switchUser(id); setTab('shows'); setShowWelcomeModal(false); },
+      onPick: (id) => {
+        switchUser(id);
+        setTab('shows');
+        setShowWelcomeModal(false);
+        const visited = JSON.parse(localStorage.getItem('visitedUsers') || '[]');
+        if (!visited.includes(id)) {
+          const friend = friends.find(f => f.id === id);
+          setProfileTarget(friend);
+        }
+      },
       onNew: () => { setShowWelcomeModal(false); setProfileTarget(false); },
     }),
     toastEl,
