@@ -416,6 +416,13 @@ const photoGradient = (artist) => {
   return gradients[Math.abs(hash) % gradients.length];
 };
 
+function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
+  const bgStyle = imgUrl
+    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: '135% 135%', backgroundPosition: 'center' }
+    : { background: photoGradient(artist) };
+  return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
+}
+
 const formatDate = (iso) => {
   if (!iso) return 'TBD';
   const d = new Date(iso + 'T12:00:00');
@@ -1025,7 +1032,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      eventImgUrl && h('img', { src: eventImgUrl, className: 'artist-photo', style: { width: 90, height: 90, objectFit: 'contain', background: '#111', borderRadius: 10, flexShrink: 0 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl, className: 'artist-photo', style: { width: 90, height: 90 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -1710,7 +1717,7 @@ function FriendRow({ show, friendId, friends }) {
 
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      eventImg && h('img', { src: eventImg, style: { width: 34, height: 34, borderRadius: 8, objectFit: 'contain', background: '#111', flexShrink: 0 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImg, style: { width: 34, height: 34, borderRadius: 8, flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
         h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
