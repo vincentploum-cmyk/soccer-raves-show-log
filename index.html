@@ -383,6 +383,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://dcowszsxgshrcwpikqtv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjb3dzenN4Z3NocmN3cGlrcXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjEwNDYsImV4cCI6MjA5MTkzNzA0Nn0.biYp6ZjyNYLpZBOUgGjxDp5qBObiUzOttrNt0D2LfzQ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 10 } } });
+const attemptedImageFetches = new Set(); // prevent duplicate fetches per session
 
 const h = React.createElement;
 
@@ -417,8 +418,10 @@ const photoGradient = (artist) => {
 };
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  if (imgUrl) return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'cover' } });
-  return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
+  const bgStyle = imgUrl
+    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { background: photoGradient(artist) };
+  return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
 }
 
 const formatDate = (iso) => {
@@ -988,29 +991,33 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
   const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
 
-  const [eventImgUrl, setEventImgUrl] = useState(null);
   const [ticketPrice, setTicketPrice] = useState(null);
   const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
+
+  // Fetch and persist og:image to Supabase if not already stored
+  useEffect(() => {
+    if (!show.crowdvolt_url || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
+    attemptedImageFetches.add(show.id);
+    fetch(`/api/fetch-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
+      .then(r => r.json())
+      .then(d => sb.from('shows').update({ artist_image_url: d.imageUrl || '' }).eq('id', show.id))
+      .catch(() => sb.from('shows').update({ artist_image_url: '' }).eq('id', show.id));
+  }, [show.id, show.crowdvolt_url, show.artist_image_url]);
+
+  // Fetch ticket prices (kept separate from image)
   useEffect(() => {
     if (show.crowdvolt_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
         .then(r => r.json())
-        .then(d => {
-          if (d.imageUrl) setEventImgUrl(d.imageUrl);
-          if (d.price) setTicketPrice(d.price);
-          setCrowdvoltLoaded(true);
-        })
+        .then(d => { if (d.price) setTicketPrice(d.price); setCrowdvoltLoaded(true); })
         .catch(() => setCrowdvoltLoaded(true));
     }
     if (show.dice_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
         .then(r => r.json())
-        .then(d => {
-          if (d.imageUrl) setEventImgUrl(prev => prev || d.imageUrl);
-          if (d.price) setDicePrice(d.price);
-        })
+        .then(d => { if (d.price) setDicePrice(d.price); })
         .catch(() => {});
     }
   }, [show.crowdvolt_url, show.dice_url]);
@@ -1030,7 +1037,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImgUrl, className: 'artist-photo', style: { width: 90, height: 90 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo', style: { width: 90, height: 90 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -1695,7 +1702,6 @@ function FriendRow({ show, friendId, friends }) {
   const t = show.tickets.find((t) => t.friend_id === friendId);
   const myReact = show.reactions.find((r) => r.friend_id === friendId);
   const [expanded, setExpanded] = useState(false);
-  const [eventImg, setEventImg] = useState(show.artist_image_url || null);
   const [ticketPrice, setTicketPrice] = useState(null);
   const [dicePrice, setDicePrice] = useState(null);
   const friendsById = Object.fromEntries((friends || []).map((f) => [f.id, f]));
@@ -1703,19 +1709,19 @@ function FriendRow({ show, friendId, friends }) {
 
   useEffect(() => {
     if (!expanded) return;
-    if (show.crowdvolt_url && !eventImg) {
+    if (show.crowdvolt_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
-        .then(r => r.json()).then(d => { if (d.imageUrl) setEventImg(d.imageUrl); if (d.price) setTicketPrice(d.price); }).catch(() => {});
+        .then(r => r.json()).then(d => { if (d.price) setTicketPrice(d.price); }).catch(() => {});
     }
     if (show.dice_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
-        .then(r => r.json()).then(d => { if (d.imageUrl && !eventImg) setEventImg(d.imageUrl); if (d.price) setDicePrice(d.price); }).catch(() => {});
+        .then(r => r.json()).then(d => { if (d.price) setDicePrice(d.price); }).catch(() => {});
     }
   }, [expanded]);
 
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: eventImg, style: { width: 34, height: 34, borderRadius: 8, flexShrink: 0 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 34, height: 34, borderRadius: 8, flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
         h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
