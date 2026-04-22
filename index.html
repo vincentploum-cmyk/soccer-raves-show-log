@@ -431,7 +431,7 @@ const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${en
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
   const bgStyle = imgUrl
-    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
     : { background: photoGradient(artist) };
   return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
 }
