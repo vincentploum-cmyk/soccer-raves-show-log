@@ -614,7 +614,7 @@ function App() {
 
   const [profileTarget, setProfileTarget] = useState(null); // null=closed, false=new, friend=edit
   const [viewedFriendId, setViewedFriendId] = useState(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(() => !localStorage.getItem('currentUserId'));
 
   // Mutations
   const saveFriendProfile = async ({ id, name, avatar_url, genres, fav_artist }) => {
