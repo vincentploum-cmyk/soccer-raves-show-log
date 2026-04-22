@@ -985,7 +985,9 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   const [eventImgUrl, setEventImgUrl] = useState(null);
   const [ticketPrice, setTicketPrice] = useState(null);
+  const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
+  const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
   useEffect(() => {
     if (show.crowdvolt_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
@@ -993,14 +995,15 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         .then(d => {
           if (d.imageUrl) setEventImgUrl(d.imageUrl);
           if (d.price) setTicketPrice(d.price);
+          setCrowdvoltLoaded(true);
         })
-        .catch(() => {});
+        .catch(() => setCrowdvoltLoaded(true));
     }
     if (show.dice_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
         .then(r => r.json())
         .then(d => {
-          if (d.imageUrl && !eventImgUrl) setEventImgUrl(d.imageUrl);
+          if (d.imageUrl) setEventImgUrl(prev => prev || d.imageUrl);
           if (d.price) setDicePrice(d.price);
         })
         .catch(() => {});
