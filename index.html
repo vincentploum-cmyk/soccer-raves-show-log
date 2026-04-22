@@ -430,10 +430,10 @@ const isPast = (iso) => {
 const mapsUrl = (venue) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue + ' NYC')}`;
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  const bgStyle = imgUrl
-    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
-    : { background: photoGradient(artist) };
-  return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
+  if (imgUrl) {
+    return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'contain', background: '#111' } });
+  }
+  return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
 const getManualEventUrl = (showId) => localStorage.getItem(`dice_url_${showId}`) || null;
