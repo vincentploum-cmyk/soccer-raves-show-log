@@ -1001,7 +1001,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     const hasSource = show.crowdvolt_url || show.dice_url;
     if (!hasSource || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
     attemptedImageFetches.add(show.id);
-    const tryFetch = (url) => fetch(`/api/fetch-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null);
+    const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null);
     (async () => {
       try {
         let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
