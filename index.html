@@ -418,10 +418,8 @@ const photoGradient = (artist) => {
 };
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  const bgStyle = imgUrl
-    ? { backgroundImage: `url(${imgUrl})`, backgroundSize: 'auto 75%', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: '#111' }
-    : { background: photoGradient(artist) };
-  return h('div', { className, style: { ...extraStyle, ...bgStyle } }, imgUrl ? null : initials(artist));
+  if (imgUrl) return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'contain', backgroundColor: '#111' } });
+  return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
 const formatDate = (iso) => {
