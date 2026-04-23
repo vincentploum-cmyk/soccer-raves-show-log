@@ -998,13 +998,20 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   // Fetch and persist og:image to Supabase if not already stored
   useEffect(() => {
-    if (!show.crowdvolt_url || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
+    const hasSource = show.crowdvolt_url || show.dice_url;
+    if (!hasSource || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
     attemptedImageFetches.add(show.id);
-    fetch(`/api/fetch-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
-      .then(r => r.json())
-      .then(d => sb.from('shows').update({ artist_image_url: d.imageUrl || '' }).eq('id', show.id))
-      .catch(() => sb.from('shows').update({ artist_image_url: '' }).eq('id', show.id));
-  }, [show.id, show.crowdvolt_url, show.artist_image_url]);
+    const tryFetch = (url) => fetch(`/api/fetch-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null);
+    (async () => {
+      try {
+        let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
+        if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
+        await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
+      } catch {
+        await sb.from('shows').update({ artist_image_url: '' }).eq('id', show.id);
+      }
+    })();
+  }, [show.id, show.crowdvolt_url, show.dice_url, show.artist_image_url]);
 
   // Fetch ticket prices (kept separate from image)
   useEffect(() => {
