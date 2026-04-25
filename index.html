@@ -1011,10 +1011,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
-  // Fetch ticket prices and resolve artist image. CrowdVolt first, Dice fallback.
+  // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
   // CrowdVolt's og:image is only accepted when it's an event-specific portrait
   // (img.crowdvolt.com/<uuid>); the generic site share card (crowdvolt.com/opengraph-image.png)
-  // is treated as "no image" so we fall through to Dice's poster.
+  // is treated as "no image."
   // Both fetches are awaited together so the decision is deterministic.
   useEffect(() => {
     if (!show.crowdvolt_url && !show.dice_url) return;
@@ -1028,7 +1028,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       if (dc.price) setDicePrice(dc.price);
       setCrowdvoltLoaded(true);
       const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
-      const chosen = cvImage || dc.imageUrl || null;
+      const chosen = dc.imageUrl || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
         sb.from('shows').update({ artist_image_url: chosen }).eq('id', show.id);
       }
@@ -2024,6 +2024,7 @@ function FriendRow({ show, friendId, friends }) {
 
   // Resolve and cache the artist image for rows that may only be viewed in this tab
   // (My Tickets), so they don't depend on the user also visiting the All Shows tab.
+  // Dice first, CrowdVolt fallback (only when CrowdVolt has an event-specific portrait).
   useEffect(() => {
     if (show.artist_image_url) return;
     if (!show.crowdvolt_url && !show.dice_url) return;
@@ -2034,7 +2035,7 @@ function FriendRow({ show, friendId, friends }) {
         show.dice_url ? tryFetch(show.dice_url) : Promise.resolve({}),
       ]);
       const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
-      const chosen = cvImage || dc.imageUrl || null;
+      const chosen = dc.imageUrl || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
         sb.from('shows').update({ artist_image_url: chosen }).eq('id', show.id);
       }
