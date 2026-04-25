@@ -2129,12 +2129,27 @@ function EditShowModal({ show, onClose, onSave }) {
   const [crowdvoltUrl, setCrowdvoltUrl] = useState(show?.crowdvolt_url || '');
   const [diceUrl, setDiceUrl] = useState(show?.dice_url || '');
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   if (!show) return null;
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
     await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null, crowdvolt_url: crowdvoltUrl.trim() || null, dice_url: diceUrl.trim() || null });
+  };
+
+  const refreshImage = async () => {
+    setRefreshing(true);
+    try {
+      // Re-run the fetch in the same Crowdvolt-first order, then save the result.
+      const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null).catch(() => null);
+      let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
+      if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
+      attemptedImageFetches.delete(show.id);
+      await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
@@ -2165,9 +2180,12 @@ function EditShowModal({ show, onClose, onSave }) {
         h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Dice event link (optional)'),
         h('input', { type: 'url', value: diceUrl, onChange: e => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' }),
       ),
-      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
-        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
-        h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save')
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: refreshImage, disabled: refreshing || saving || (!show.crowdvolt_url && !show.dice_url), title: 'Re-fetch the artist image (Crowdvolt first, then Dice)' }, refreshing ? 'Refreshing…' : '↻ Refresh image'),
+        h('div', { style: { display: 'flex', gap: 8 } },
+          h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+          h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save')
+        )
       )
     )
   );
