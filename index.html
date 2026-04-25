@@ -1512,7 +1512,7 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
         // Insert in chunks of 200 to avoid request size limits.
         for (let i = 0; i < ticketRows.length; i += 200) {
           const chunk = ticketRows.slice(i, i + 200);
-          const { error: tErr } = await sb.from('tickets').insert(chunk);
+          const { error: tErr } = await sb.from('tickets').upsert(chunk, { onConflict: 'show_id,friend_id', ignoreDuplicates: true });
           if (tErr) throw new Error('Tickets insert: ' + tErr.message);
           setProgress({ done: Math.min(i + chunk.length, ticketRows.length), total: ticketRows.length, label: 'Importing tickets' });
         }
