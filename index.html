@@ -421,7 +421,7 @@ function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
   // Both branches share the same className + style so the rendered box has identical
   // width / height / border-radius. The image uses object-fit: cover so it fills the
   // same area the gradient block fills.
-  if (imgUrl) return h('img', { src: imgUrl, alt: artist || '', className, style: { ...extraStyle, objectFit: 'cover', display: 'block' } });
+  if (imgUrl) return h('img', { src: imgUrl, alt: artist || '', className, style: { ...extraStyle, objectFit: 'cover', objectPosition: 'center', display: 'block' } });
   return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
