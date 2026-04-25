@@ -415,7 +415,8 @@ const photoGradient = (artist) => {
   return gradients[Math.abs(hash) % gradients.length];
 };
 
-function ArtistPhoto({ artist, className, style: extraStyle }) {
+function ArtistPhoto({ artist, imgUrl, className, style: extraStyle }) {
+  if (imgUrl) return h('img', { src: imgUrl, alt: artist || '', className, style: { ...extraStyle, objectFit: 'cover', objectPosition: 'center', display: 'block' } });
   return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
@@ -1010,21 +1011,36 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
-  // Fetch ticket prices
+  // Fetch ticket prices and resolve artist image (CrowdVolt first, Dice fallback).
+  // Cache the resolved image URL in artist_image_url so we don't refetch on subsequent renders.
   useEffect(() => {
+    let cvImage = null;
     if (show.crowdvolt_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
         .then(r => r.json())
-        .then(d => { if (d.price) setTicketPrice(d.price); setCrowdvoltLoaded(true); })
+        .then(d => {
+          if (d.price) setTicketPrice(d.price);
+          cvImage = d.imageUrl || null;
+          setCrowdvoltLoaded(true);
+          if (cvImage && show.artist_image_url !== cvImage) {
+            sb.from('shows').update({ artist_image_url: cvImage }).eq('id', show.id);
+          }
+        })
         .catch(() => setCrowdvoltLoaded(true));
     }
     if (show.dice_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
         .then(r => r.json())
-        .then(d => { if (d.price) setDicePrice(d.price); })
+        .then(d => {
+          if (d.price) setDicePrice(d.price);
+          // Use Dice image only if CrowdVolt didn't provide one.
+          if (!cvImage && d.imageUrl && show.artist_image_url !== d.imageUrl) {
+            sb.from('shows').update({ artist_image_url: d.imageUrl }).eq('id', show.id);
+          }
+        })
         .catch(() => {});
     }
-  }, [show.crowdvolt_url, show.dice_url]);
+  }, [show.crowdvolt_url, show.dice_url, show.id, show.artist_image_url]);
 
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
@@ -1041,7 +1057,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, className: 'artist-photo', style: { width: 113, height: 113 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo', style: { width: 113, height: 113 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -2015,7 +2031,7 @@ function FriendRow({ show, friendId, friends }) {
 
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      h(ArtistPhoto, { artist: show.artist, style: { width: 43, height: 43, borderRadius: 10, flexShrink: 0 } }),
+      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 43, height: 43, borderRadius: 10, flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
         h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
