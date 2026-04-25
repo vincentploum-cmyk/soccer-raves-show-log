@@ -418,7 +418,7 @@ const photoGradient = (artist) => {
 };
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  if (imgUrl) return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'cover' } });
+  if (imgUrl) return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'contain', background: 'var(--card-bg)' } });
   return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
