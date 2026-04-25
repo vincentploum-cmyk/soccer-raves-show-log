@@ -383,8 +383,6 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://dcowszsxgshrcwpikqtv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjb3dzenN4Z3NocmN3cGlrcXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNjEwNDYsImV4cCI6MjA5MTkzNzA0Nn0.biYp6ZjyNYLpZBOUgGjxDp5qBObiUzOttrNt0D2LfzQ';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { params: { eventsPerSecond: 10 } } });
-const attemptedImageFetches = new Set(); // prevent duplicate fetches per session
-
 const h = React.createElement;
 
 // ===== Utilities =====
@@ -417,11 +415,7 @@ const photoGradient = (artist) => {
   return gradients[Math.abs(hash) % gradients.length];
 };
 
-function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  // Both branches share the same className + style so the rendered box has identical
-  // width / height / border-radius. The image uses object-fit: cover so it fills the
-  // same area the gradient block fills.
-  if (imgUrl) return h('img', { src: imgUrl, alt: artist || '', className, style: { ...extraStyle, objectFit: 'fill', display: 'block' } });
+function ArtistPhoto({ artist, className, style: extraStyle }) {
   return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
@@ -1016,22 +1010,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
-  // Resolve the artist image: cached value > CrowdVolt og:image > Dice og:image > gradient fallback.
-  // Successful lookups are written back to artist_image_url so we never refetch.
-  useEffect(() => {
-    const hasSource = show.crowdvolt_url || show.dice_url;
-    if (!hasSource || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
-    attemptedImageFetches.add(show.id);
-    const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
-    (async () => {
-      let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
-      if (!imageUrl && show.crowdvolt_url) imageUrl = await tryFetch(show.crowdvolt_url);
-      // Empty string = "we tried both, nothing found" → render the gradient fallback and don't retry.
-      await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
-    })();
-  }, [show.id, show.crowdvolt_url, show.dice_url, show.artist_image_url]);
-
-  // Fetch ticket prices (kept separate from image)
+  // Fetch ticket prices
   useEffect(() => {
     if (show.crowdvolt_url) {
       fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
@@ -1062,7 +1041,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
 
   return h('div', { className: cardClass },
     h('div', { className: 'artist-row' },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo', style: { width: 113, height: 113 } }),
+      h(ArtistPhoto, { artist: show.artist, className: 'artist-photo', style: { width: 113, height: 113 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
           h('div', { style: { flex: 1, minWidth: 0 } },
@@ -2036,7 +2015,7 @@ function FriendRow({ show, friendId, friends }) {
 
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 43, height: 43, borderRadius: 10, flexShrink: 0 } }),
+      h(ArtistPhoto, { artist: show.artist, style: { width: 43, height: 43, borderRadius: 10, flexShrink: 0 } }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { style: { fontWeight: 500, fontSize: 14 } }, show.artist),
         h('div', { style: { fontSize: 11, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } },
@@ -2130,27 +2109,12 @@ function EditShowModal({ show, onClose, onSave }) {
   const [crowdvoltUrl, setCrowdvoltUrl] = useState(show?.crowdvolt_url || '');
   const [diceUrl, setDiceUrl] = useState(show?.dice_url || '');
   const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   if (!show) return null;
 
   const submit = async () => {
     if (!artist.trim()) return;
     setSaving(true);
     await onSave({ date: date || null, artist: artist.trim(), venue: venue.trim() || null, note: note.trim() || null, crowdvolt_url: crowdvoltUrl.trim() || null, dice_url: diceUrl.trim() || null });
-  };
-
-  const refreshImage = async () => {
-    setRefreshing(true);
-    try {
-      // Re-run the fetch in Dice-first → CrowdVolt-second order.
-      const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
-      let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
-      if (!imageUrl && show.crowdvolt_url) imageUrl = await tryFetch(show.crowdvolt_url);
-      attemptedImageFetches.delete(show.id);
-      await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
-    } finally {
-      setRefreshing(false);
-    }
   };
 
   return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
@@ -2181,12 +2145,9 @@ function EditShowModal({ show, onClose, onSave }) {
         h('span', { className: 'field-label', style: { display: 'block', marginBottom: 6 } }, 'Dice event link (optional)'),
         h('input', { type: 'url', value: diceUrl, onChange: e => setDiceUrl(e.target.value), placeholder: 'https://dice.fm/event/...' }),
       ),
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 } },
-        h('button', { className: 'ghost-btn', onClick: refreshImage, disabled: refreshing || saving || (!show.crowdvolt_url && !show.dice_url), title: 'Re-fetch the artist image (Crowdvolt first, then Dice)' }, refreshing ? 'Refreshing…' : '↻ Refresh image'),
-        h('div', { style: { display: 'flex', gap: 8 } },
-          h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
-          h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save')
-        )
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save')
       )
     )
   );
