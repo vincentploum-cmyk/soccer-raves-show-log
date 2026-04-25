@@ -418,7 +418,10 @@ const photoGradient = (artist) => {
 };
 
 function ArtistPhoto({ imgUrl, artist, className, style: extraStyle }) {
-  if (imgUrl) return h('img', { src: imgUrl, className, style: { ...extraStyle, objectFit: 'contain', background: 'var(--card-bg)' } });
+  // Both branches share the same className + style so the rendered box has identical
+  // width / height / border-radius. The image uses object-fit: cover so it fills the
+  // same area the gradient block fills.
+  if (imgUrl) return h('img', { src: imgUrl, alt: artist || '', className, style: { ...extraStyle, objectFit: 'cover', display: 'block' } });
   return h('div', { className, style: { ...extraStyle, background: photoGradient(artist) } }, initials(artist));
 }
 
@@ -1013,20 +1016,18 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
-  // Fetch and persist og:image to Supabase if not already stored
+  // Resolve the artist image: cached value > CrowdVolt og:image > Dice og:image > gradient fallback.
+  // Successful lookups are written back to artist_image_url so we never refetch.
   useEffect(() => {
     const hasSource = show.crowdvolt_url || show.dice_url;
     if (!hasSource || show.artist_image_url !== null || attemptedImageFetches.has(show.id)) return;
     attemptedImageFetches.add(show.id);
-    const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null);
+    const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
     (async () => {
-      try {
-        let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
-        if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
-        await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
-      } catch {
-        await sb.from('shows').update({ artist_image_url: '' }).eq('id', show.id);
-      }
+      let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
+      if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
+      // Empty string = "we tried both, nothing found" → render the gradient fallback and don't retry.
+      await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
     })();
   }, [show.id, show.crowdvolt_url, show.dice_url, show.artist_image_url]);
 
@@ -2142,7 +2143,7 @@ function EditShowModal({ show, onClose, onSave }) {
     setRefreshing(true);
     try {
       // Re-run the fetch in the same Crowdvolt-first order, then save the result.
-      const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null).catch(() => null);
+      const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
       let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
       if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
       attemptedImageFetches.delete(show.id);
