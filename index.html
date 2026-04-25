@@ -489,6 +489,7 @@ function App() {
   const [tab, setTab] = useState('shows');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addFriendModalOpen, setAddFriendModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
@@ -767,9 +768,11 @@ function App() {
     // Content below panel (events are their own cards, no outer wrapper)
     tab === 'shows' && h(ShowsView, {
       shows: sorted, allShows: showsEnriched, friends, currentUser,
+      isAdmin,
       filter, setFilter,
       onAdd: () => setAddModalOpen(true),
       onAddFriend: () => setAddFriendModalOpen(true),
+      onImport: () => setImportModalOpen(true),
       onEditChip: (showId, friendId) => setEditModal({ showId, friendId }),
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
@@ -801,6 +804,18 @@ function App() {
         if (error) { showToast('Error: ' + error.message); return; }
         showToast('Friend added!');
         setAddFriendModalOpen(false);
+      },
+    }),
+    importModalOpen && h(ImportModal, {
+      friends, shows, currentUser,
+      onClose: () => setImportModalOpen(false),
+      onComplete: ({ showsAdded, ticketsAdded, friendsAdded }) => {
+        setImportModalOpen(false);
+        const parts = [];
+        if (showsAdded) parts.push(`${showsAdded} show${showsAdded === 1 ? '' : 's'}`);
+        if (ticketsAdded) parts.push(`${ticketsAdded} ticket${ticketsAdded === 1 ? '' : 's'}`);
+        if (friendsAdded) parts.push(`${friendsAdded} friend${friendsAdded === 1 ? '' : 's'}`);
+        showToast(parts.length ? `Imported ${parts.join(', ')}` : 'Nothing new to import');
       },
     }),
     editModal && h(EditChipModal, {
@@ -933,7 +948,7 @@ function LeaderboardView({ friends, shows }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, onAdd, onAddFriend, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -962,6 +977,7 @@ function ShowsView({ shows, allShows, friends, currentUser, filter, setFilter, o
         value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
       }),
       h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
+      isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet' }, '↥ Import'),
       h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show'),
     ),
     !currentUser && h('div', { style: { padding: '12px 16px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid rgba(255, 170, 0, 0.3)', borderRadius: 10, marginBottom: 14, fontSize: 13, color: 'var(--amber)' } },
@@ -1266,6 +1282,281 @@ function AddShowModal({ onClose, onSave }) {
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
         h('button', { className: 'primary-btn', onClick: submit, disabled: saving || !artist.trim() }, saving ? 'Saving...' : 'Save show')
+      )
+    )
+  );
+}
+
+// ===== Import modal =====
+// Accepts the soccer-raves spreadsheet format:
+//   Date | DJ / Artist | Venue | <friend cols...> | Note | Tim Rating
+// Dates are like "Thu Jan 1" with no year — we apply the year picked in the modal.
+// Friend columns map by case-insensitive prefix on the friend's name (e.g. "Tim" → "Tim Hayes").
+// Cell values: blank/0 = no ticket, 1+ = ticket count.
+const RESERVED_IMPORT_HEADERS = new Set(['date', 'dj / artist', 'artist', 'venue', 'note', 'notes', 'tim rating', 'rating']);
+
+function parseDelimited(text) {
+  // Auto-detect delimiter (tab if any tabs in first line, else comma).
+  const firstNl = text.indexOf('\n');
+  const head = firstNl >= 0 ? text.slice(0, firstNl) : text;
+  const delim = head.includes('\t') ? '\t' : ',';
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === delim) { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => c && c.trim()));
+}
+
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+function parseSheetDate(raw, year) {
+  if (!raw) return null;
+  const s = raw.trim();
+  // ISO date like 2026-01-01 — use as-is.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // "Thu Jan 1" / "Jan 1" / "1/15"
+  const m = s.match(/([A-Za-z]+)\s+(\d{1,2})/);
+  if (m) {
+    const mon = MONTHS[m[1].toLowerCase().slice(0, 4)] || MONTHS[m[1].toLowerCase().slice(0, 3)];
+    const day = parseInt(m[2], 10);
+    if (mon && day) return `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  const m2 = s.match(/^(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?$/);
+  if (m2) {
+    const mon = parseInt(m2[1], 10), day = parseInt(m2[2], 10);
+    const y = m2[3] ? (m2[3].length === 2 ? 2000 + parseInt(m2[3], 10) : parseInt(m2[3], 10)) : year;
+    return `${y}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  return null;
+}
+
+function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
+  const currentYear = new Date().getFullYear();
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [csvText, setCsvText] = useState('');
+  const [year, setYear] = useState(String(currentYear));
+  const [parsed, setParsed] = useState(null); // { rows, columnMap, unknownColumns, errors }
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(null); // { done, total, label }
+  const [error, setError] = useState(null);
+
+  const fetchFromUrl = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      // Convert any Google Sheets URL to its CSV export, then proxy via /api/sheet-csv to avoid CORS.
+      let target = sourceUrl.trim();
+      const m = target.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if (m) {
+        const id = m[1];
+        const gidMatch = target.match(/[?#&]gid=(\d+)/);
+        const gid = gidMatch ? gidMatch[1] : '0';
+        target = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+      }
+      const resp = await fetch(`/api/sheet-csv?url=${encodeURIComponent(target)}`);
+      if (!resp.ok) throw new Error(`Fetch failed (${resp.status})`);
+      const text = await resp.text();
+      setCsvText(text);
+      doParse(text);
+    } catch (e) {
+      setError(e.message || 'Failed to fetch sheet. Make sure it is shared as "Anyone with the link can view".');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doParse = (textOverride) => {
+    setError(null);
+    const text = textOverride !== undefined ? textOverride : csvText;
+    if (!text.trim()) { setError('Paste CSV content or fetch from a Google Sheets URL first.'); return; }
+    const rows = parseDelimited(text);
+    if (rows.length < 2) { setError('Need at least a header row and one data row.'); return; }
+    const header = rows[0].map(c => (c || '').trim());
+    // Identify reserved columns by header name.
+    const dateIdx = header.findIndex(h => /^date$/i.test(h));
+    const artistIdx = header.findIndex(h => /^(dj\s*\/\s*artist|artist|dj)$/i.test(h));
+    const venueIdx = header.findIndex(h => /^venue$/i.test(h));
+    const noteIdx = header.findIndex(h => /^notes?$/i.test(h));
+    if (dateIdx < 0 || artistIdx < 0) {
+      setError('Header must include "Date" and "DJ / Artist" columns.');
+      return;
+    }
+    // Map remaining columns to friends.
+    const columnMap = []; // { idx, header, friendId | null, friendName }
+    const unknownColumns = [];
+    header.forEach((hd, idx) => {
+      if (idx === dateIdx || idx === artistIdx || idx === venueIdx || idx === noteIdx) return;
+      const key = hd.toLowerCase().trim();
+      if (!key || RESERVED_IMPORT_HEADERS.has(key)) return;
+      const exact = friends.find(f => f.name.toLowerCase() === key);
+      const prefix = exact || friends.find(f => f.name.toLowerCase().startsWith(key + ' ') || f.name.toLowerCase() === key);
+      // Header might also be "Nick He" matching "Nick He..." — startsWith handles that.
+      const matched = exact || prefix || friends.find(f => f.name.toLowerCase().startsWith(key));
+      if (matched) columnMap.push({ idx, header: hd, friendId: matched.id, friendName: matched.name });
+      else { columnMap.push({ idx, header: hd, friendId: null, friendName: hd }); unknownColumns.push(hd); }
+    });
+    // Build show rows.
+    const dataRows = [];
+    const errors = [];
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      const rawDate = row[dateIdx] || '';
+      const artist = (row[artistIdx] || '').trim();
+      const venue = venueIdx >= 0 ? (row[venueIdx] || '').trim() : '';
+      const note = noteIdx >= 0 ? (row[noteIdx] || '').trim() : '';
+      if (!artist) continue;
+      const date = parseSheetDate(rawDate, year);
+      if (!date) { errors.push(`Row ${r + 1}: bad date "${rawDate}"`); continue; }
+      const tickets = [];
+      columnMap.forEach(cm => {
+        const cell = (row[cm.idx] || '').trim();
+        if (!cell) return;
+        const n = parseInt(cell, 10);
+        if (Number.isFinite(n) && n > 0) tickets.push({ friendName: cm.friendName, friendId: cm.friendId, count: n });
+      });
+      dataRows.push({ date, artist, venue: venue || null, note: note || null, tickets });
+    }
+    setParsed({ rows: dataRows, columnMap, unknownColumns, errors });
+  };
+
+  // Recompute when year changes after parse.
+  useEffect(() => { if (csvText && parsed) doParse(csvText); /* eslint-disable-line */ }, [year]);
+
+  const runImport = async () => {
+    if (!parsed) return;
+    setError(null);
+    setBusy(true);
+    try {
+      // 1. Create any missing friends (from unknown columns that have at least one ticket).
+      const friendsByName = new Map(friends.map(f => [f.name.toLowerCase(), f]));
+      const neededNew = new Set();
+      parsed.rows.forEach(r => r.tickets.forEach(t => {
+        if (!t.friendId && !friendsByName.has(t.friendName.toLowerCase())) neededNew.add(t.friendName);
+      }));
+      const newFriendNames = [...neededNew];
+      if (newFriendNames.length) {
+        setProgress({ done: 0, total: newFriendNames.length, label: 'Creating new friends' });
+        const { data, error: fErr } = await sb.from('friends').insert(newFriendNames.map(name => ({ name }))).select();
+        if (fErr) throw new Error('Friends insert: ' + fErr.message);
+        (data || []).forEach(f => friendsByName.set(f.name.toLowerCase(), f));
+      }
+
+      // 2. Build show inserts (skipping ones that already exist by date+artist).
+      const existingKey = (s) => `${s.date}::${(s.artist || '').toLowerCase().trim()}`;
+      const existingMap = new Map(shows.map(s => [existingKey(s), s]));
+      const toInsert = [];
+      const rowAssignments = []; // index into parsed.rows → existing show, will fill after insert
+      parsed.rows.forEach((r, i) => {
+        const key = `${r.date}::${r.artist.toLowerCase().trim()}`;
+        if (existingMap.has(key)) rowAssignments[i] = existingMap.get(key);
+        else { toInsert.push({ date: r.date, artist: r.artist, venue: r.venue, note: r.note }); rowAssignments[i] = null; }
+      });
+      let inserted = [];
+      if (toInsert.length) {
+        setProgress({ done: 0, total: toInsert.length, label: 'Importing shows' });
+        const { data, error: sErr } = await sb.from('shows').insert(toInsert).select();
+        if (sErr) throw new Error('Shows insert: ' + sErr.message);
+        inserted = data || [];
+        const insMap = new Map(inserted.map(s => [existingKey(s), s]));
+        parsed.rows.forEach((r, i) => {
+          if (rowAssignments[i]) return;
+          rowAssignments[i] = insMap.get(`${r.date}::${r.artist.toLowerCase().trim()}`);
+        });
+      }
+
+      // 3. Build ticket inserts (skip any that would duplicate; we just insert fresh — DB has no unique on (show,friend), so we let live updates dedupe via realtime + replace).
+      const ticketRows = [];
+      parsed.rows.forEach((r, i) => {
+        const show = rowAssignments[i];
+        if (!show) return;
+        r.tickets.forEach(t => {
+          const friend = t.friendId ? friends.find(f => f.id === t.friendId) : friendsByName.get(t.friendName.toLowerCase());
+          if (!friend) return;
+          ticketRows.push({ show_id: show.id, friend_id: friend.id, count: t.count, added_by_friend_id: currentUser?.id || friend.id });
+        });
+      });
+      if (ticketRows.length) {
+        setProgress({ done: 0, total: ticketRows.length, label: 'Importing tickets' });
+        // Insert in chunks of 200 to avoid request size limits.
+        for (let i = 0; i < ticketRows.length; i += 200) {
+          const chunk = ticketRows.slice(i, i + 200);
+          const { error: tErr } = await sb.from('tickets').insert(chunk);
+          if (tErr) throw new Error('Tickets insert: ' + tErr.message);
+          setProgress({ done: Math.min(i + chunk.length, ticketRows.length), total: ticketRows.length, label: 'Importing tickets' });
+        }
+      }
+      onComplete({ showsAdded: inserted.length, ticketsAdded: ticketRows.length, friendsAdded: newFriendNames.length });
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
+  };
+
+  const ticketsTotal = parsed ? parsed.rows.reduce((a, r) => a + r.tickets.length, 0) : 0;
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget && !busy) onClose(); } },
+    h('div', { className: 'modal', style: { maxWidth: 560 } },
+      h('p', { className: 'modal-sub' }, 'bulk import'),
+      h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 8 } }, 'Import shows from spreadsheet'),
+      h('p', { style: { fontSize: 12, color: '#666', marginBottom: 16, lineHeight: 1.5 } },
+        'Format: ', h('code', { style: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11 } }, 'Date | DJ / Artist | Venue | <one column per friend> | Note'),
+        '. Friend cells hold ticket counts (blank or 0 = no ticket).'
+      ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Year (applied to dates without one)'),
+        h('select', { value: year, onChange: e => setYear(e.target.value), style: { width: 'auto' } },
+          [currentYear + 1, currentYear, currentYear - 1, currentYear - 2].map(y => h('option', { key: y, value: String(y) }, String(y)))
+        )
+      ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Google Sheets URL (optional)'),
+        h('div', { style: { display: 'flex', gap: 6 } },
+          h('input', { type: 'url', value: sourceUrl, onChange: e => setSourceUrl(e.target.value), placeholder: 'https://docs.google.com/spreadsheets/d/.../edit?gid=...', style: { flex: 1 } }),
+          h('button', { className: 'ghost-btn', onClick: fetchFromUrl, disabled: busy || !sourceUrl.trim() }, busy ? '…' : 'Fetch')
+        ),
+        h('p', { style: { fontSize: 11, color: '#999', marginTop: 6 } }, 'Sheet must be shared as "Anyone with the link can view".')
+      ),
+      h('div', { className: 'field' },
+        h('span', { className: 'field-label' }, 'Or paste CSV / TSV here'),
+        h('textarea', { value: csvText, onChange: e => setCsvText(e.target.value), rows: 6, placeholder: 'Date,DJ / Artist,Venue,Tim,Vincent,...\nThu Jan 1,"Carl Cox, Loco Dice",Brooklyn Storehouse,2,1,...', style: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, resize: 'vertical' } })
+      ),
+      !parsed && h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 } },
+        h('button', { className: 'ghost-btn', onClick: onClose, disabled: busy }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: () => doParse(), disabled: busy || !csvText.trim() }, 'Preview')
+      ),
+      parsed && h('div', { style: { padding: 14, background: 'rgba(0,0,0,0.03)', borderRadius: 12, marginTop: 4, fontSize: 13, lineHeight: 1.6 } },
+        h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Preview'),
+        h('div', null, h('b', null, parsed.rows.length), ' shows · ', h('b', null, ticketsTotal), ' ticket entries · ', h('b', null, parsed.columnMap.length), ' friend columns'),
+        parsed.unknownColumns.length > 0 && h('div', { style: { color: 'var(--amber)', marginTop: 6, fontSize: 12 } },
+          '⚠ ', h('b', null, parsed.unknownColumns.length), ' new friend(s) will be created: ', parsed.unknownColumns.join(', ')
+        ),
+        parsed.errors.length > 0 && h('div', { style: { color: 'var(--red)', marginTop: 6, fontSize: 12 } },
+          '⚠ ', parsed.errors.length, ' row(s) skipped due to bad dates'
+        ),
+        progress && h('div', { style: { marginTop: 10, fontSize: 12, color: '#666' } }, `${progress.label}: ${progress.done}/${progress.total}`),
+      ),
+      error && h('div', { style: { padding: 10, background: 'var(--danger-bg)', borderRadius: 10, marginTop: 10, fontSize: 12, color: 'var(--red)' } }, error),
+      parsed && h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 } },
+        h('button', { className: 'ghost-btn', onClick: () => setParsed(null), disabled: busy }, 'Back'),
+        h('button', { className: 'ghost-btn', onClick: onClose, disabled: busy }, 'Cancel'),
+        h('button', { className: 'primary-btn', onClick: runImport, disabled: busy || parsed.rows.length === 0 }, busy ? 'Importing…' : `Import ${parsed.rows.length} shows`)
       )
     )
   );
