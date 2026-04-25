@@ -2022,6 +2022,25 @@ function FriendRow({ show, friendId, friends }) {
     }
   }, [expanded]);
 
+  // Resolve and cache the artist image for rows that may only be viewed in this tab
+  // (My Tickets), so they don't depend on the user also visiting the All Shows tab.
+  useEffect(() => {
+    if (show.artist_image_url) return;
+    if (!show.crowdvolt_url && !show.dice_url) return;
+    (async () => {
+      const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).catch(() => ({}));
+      const [cv, dc] = await Promise.all([
+        show.crowdvolt_url ? tryFetch(show.crowdvolt_url) : Promise.resolve({}),
+        show.dice_url ? tryFetch(show.dice_url) : Promise.resolve({}),
+      ]);
+      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
+      const chosen = cvImage || dc.imageUrl || null;
+      if (chosen && show.artist_image_url !== chosen) {
+        sb.from('shows').update({ artist_image_url: chosen }).eq('id', show.id);
+      }
+    })();
+  }, [show.id, show.crowdvolt_url, show.dice_url, show.artist_image_url]);
+
   return h('div', { className: 'friend-row' + (show.past ? ' past-row' : ''), style: { flexDirection: 'column', alignItems: 'stretch', cursor: 'pointer', gap: 0 }, onClick: () => setExpanded(!expanded) },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
       h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, style: { width: 54, height: 54, borderRadius: 13, flexShrink: 0 } }),
