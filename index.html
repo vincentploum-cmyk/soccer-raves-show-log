@@ -1011,35 +1011,28 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [dicePrice, setDicePrice] = useState(null);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
-  // Fetch ticket prices and resolve artist image (CrowdVolt first, Dice fallback).
-  // Cache the resolved image URL in artist_image_url so we don't refetch on subsequent renders.
+  // Fetch ticket prices and resolve artist image. CrowdVolt first, Dice fallback.
+  // CrowdVolt's og:image is only accepted when it's an event-specific portrait
+  // (img.crowdvolt.com/<uuid>); the generic site share card (crowdvolt.com/opengraph-image.png)
+  // is treated as "no image" so we fall through to Dice's poster.
+  // Both fetches are awaited together so the decision is deterministic.
   useEffect(() => {
-    let cvImage = null;
-    if (show.crowdvolt_url) {
-      fetch(`/api/event-image?url=${encodeURIComponent(show.crowdvolt_url)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.price) setTicketPrice(d.price);
-          cvImage = d.imageUrl || null;
-          setCrowdvoltLoaded(true);
-          if (cvImage && show.artist_image_url !== cvImage) {
-            sb.from('shows').update({ artist_image_url: cvImage }).eq('id', show.id);
-          }
-        })
-        .catch(() => setCrowdvoltLoaded(true));
-    }
-    if (show.dice_url) {
-      fetch(`/api/event-image?url=${encodeURIComponent(show.dice_url)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.price) setDicePrice(d.price);
-          // Use Dice image only if CrowdVolt didn't provide one.
-          if (!cvImage && d.imageUrl && show.artist_image_url !== d.imageUrl) {
-            sb.from('shows').update({ artist_image_url: d.imageUrl }).eq('id', show.id);
-          }
-        })
-        .catch(() => {});
-    }
+    if (!show.crowdvolt_url && !show.dice_url) return;
+    (async () => {
+      const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).catch(() => ({}));
+      const [cv, dc] = await Promise.all([
+        show.crowdvolt_url ? tryFetch(show.crowdvolt_url) : Promise.resolve({}),
+        show.dice_url ? tryFetch(show.dice_url) : Promise.resolve({}),
+      ]);
+      if (cv.price) setTicketPrice(cv.price);
+      if (dc.price) setDicePrice(dc.price);
+      setCrowdvoltLoaded(true);
+      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
+      const chosen = cvImage || dc.imageUrl || null;
+      if (chosen && show.artist_image_url !== chosen) {
+        sb.from('shows').update({ artist_image_url: chosen }).eq('id', show.id);
+      }
+    })();
   }, [show.crowdvolt_url, show.dice_url, show.id, show.artist_image_url]);
 
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
