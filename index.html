@@ -807,15 +807,18 @@ function App() {
       },
     }),
     importModalOpen && h(ImportModal, {
-      friends, shows, currentUser,
+      friends, shows, tickets, currentUser,
       onClose: () => setImportModalOpen(false),
-      onComplete: ({ showsAdded, ticketsAdded, friendsAdded }) => {
+      onComplete: ({ showsAdded, ticketsAdded, friendsAdded, ticketsSkipped, showsSkipped }) => {
         setImportModalOpen(false);
         const parts = [];
         if (showsAdded) parts.push(`${showsAdded} show${showsAdded === 1 ? '' : 's'}`);
         if (ticketsAdded) parts.push(`${ticketsAdded} ticket${ticketsAdded === 1 ? '' : 's'}`);
         if (friendsAdded) parts.push(`${friendsAdded} friend${friendsAdded === 1 ? '' : 's'}`);
-        showToast(parts.length ? `Imported ${parts.join(', ')}` : 'Nothing new to import');
+        const skipped = (ticketsSkipped || 0) + (showsSkipped || 0);
+        let msg = parts.length ? `Imported ${parts.join(', ')}` : 'Nothing new to import';
+        if (skipped) msg += ` · ${skipped} duplicate${skipped === 1 ? '' : 's'} skipped`;
+        showToast(msg);
       },
     }),
     editModal && h(EditChipModal, {
@@ -1345,7 +1348,7 @@ function parseSheetDate(raw, year) {
   return null;
 }
 
-function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
+function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete }) {
   const currentYear = new Date().getFullYear();
   const [sourceUrl, setSourceUrl] = useState('');
   const [csvText, setCsvText] = useState('');
@@ -1410,9 +1413,14 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
       if (matched) columnMap.push({ idx, header: hd, friendId: matched.id, friendName: matched.name });
       else { columnMap.push({ idx, header: hd, friendId: null, friendName: hd }); unknownColumns.push(hd); }
     });
-    // Build show rows.
+    // Build show rows + classify against existing data.
+    const showKey = (date, artist) => `${date}::${(artist || '').toLowerCase().trim()}`;
+    const existingShowMap = new Map(shows.map(s => [showKey(s.date, s.artist), s]));
+    const existingTicketSet = new Set((tickets || []).map(t => `${t.show_id}::${t.friend_id}`));
     const dataRows = [];
     const errors = [];
+    let existingShowCount = 0, newShowCount = 0;
+    let newTicketCount = 0, dupTicketCount = 0;
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r];
       const rawDate = row[dateIdx] || '';
@@ -1422,16 +1430,22 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
       if (!artist) continue;
       const date = parseSheetDate(rawDate, year);
       if (!date) { errors.push(`Row ${r + 1}: bad date "${rawDate}"`); continue; }
-      const tickets = [];
+      const existingShow = existingShowMap.get(showKey(date, artist));
+      if (existingShow) existingShowCount++; else newShowCount++;
+      const rowTickets = [];
       columnMap.forEach(cm => {
         const cell = (row[cm.idx] || '').trim();
         if (!cell) return;
         const n = parseInt(cell, 10);
-        if (Number.isFinite(n) && n > 0) tickets.push({ friendName: cm.friendName, friendId: cm.friendId, count: n });
+        if (!Number.isFinite(n) || n <= 0) return;
+        // Check for existing ticket on existing show + matched friend.
+        const isDup = existingShow && cm.friendId && existingTicketSet.has(`${existingShow.id}::${cm.friendId}`);
+        if (isDup) dupTicketCount++; else newTicketCount++;
+        rowTickets.push({ friendName: cm.friendName, friendId: cm.friendId, count: n, isDup: !!isDup });
       });
-      dataRows.push({ date, artist, venue: venue || null, note: note || null, tickets });
+      dataRows.push({ date, artist, venue: venue || null, note: note || null, tickets: rowTickets, existingShowId: existingShow?.id || null });
     }
-    setParsed({ rows: dataRows, columnMap, unknownColumns, errors });
+    setParsed({ rows: dataRows, columnMap, unknownColumns, errors, existingShowCount, newShowCount, newTicketCount, dupTicketCount });
   };
 
   // Recompute when year changes after parse.
@@ -1479,14 +1493,17 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
         });
       }
 
-      // 3. Build ticket inserts (skip any that would duplicate; we just insert fresh — DB has no unique on (show,friend), so we let live updates dedupe via realtime + replace).
+      // 3. Build ticket inserts, skipping any (show_id, friend_id) that already has a ticket on file.
+      const existingTicketSet = new Set((tickets || []).map(t => `${t.show_id}::${t.friend_id}`));
       const ticketRows = [];
+      let ticketsSkipped = 0;
       parsed.rows.forEach((r, i) => {
         const show = rowAssignments[i];
         if (!show) return;
         r.tickets.forEach(t => {
           const friend = t.friendId ? friends.find(f => f.id === t.friendId) : friendsByName.get(t.friendName.toLowerCase());
           if (!friend) return;
+          if (existingTicketSet.has(`${show.id}::${friend.id}`)) { ticketsSkipped++; return; }
           ticketRows.push({ show_id: show.id, friend_id: friend.id, count: t.count, added_by_friend_id: currentUser?.id || friend.id });
         });
       });
@@ -1500,7 +1517,8 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
           setProgress({ done: Math.min(i + chunk.length, ticketRows.length), total: ticketRows.length, label: 'Importing tickets' });
         }
       }
-      onComplete({ showsAdded: inserted.length, ticketsAdded: ticketRows.length, friendsAdded: newFriendNames.length });
+      const showsSkipped = parsed.rows.length - toInsert.length;
+      onComplete({ showsAdded: inserted.length, ticketsAdded: ticketRows.length, friendsAdded: newFriendNames.length, ticketsSkipped, showsSkipped });
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -1510,6 +1528,7 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
   };
 
   const ticketsTotal = parsed ? parsed.rows.reduce((a, r) => a + r.tickets.length, 0) : 0;
+  const matchedFriendCount = parsed ? parsed.columnMap.filter(c => c.friendId).length : 0;
 
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget && !busy) onClose(); } },
     h('div', { className: 'modal', style: { maxWidth: 560 } },
@@ -1543,10 +1562,9 @@ function ImportModal({ friends, shows, currentUser, onClose, onComplete }) {
       ),
       parsed && h('div', { style: { padding: 14, background: 'rgba(0,0,0,0.03)', borderRadius: 12, marginTop: 4, fontSize: 13, lineHeight: 1.6 } },
         h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 8 } }, 'Preview'),
-        h('div', null, h('b', null, parsed.rows.length), ' shows · ', h('b', null, ticketsTotal), ' ticket entries · ', h('b', null, parsed.columnMap.length), ' friend columns'),
-        parsed.unknownColumns.length > 0 && h('div', { style: { color: 'var(--amber)', marginTop: 6, fontSize: 12 } },
-          '⚠ ', h('b', null, parsed.unknownColumns.length), ' new friend(s) will be created: ', parsed.unknownColumns.join(', ')
-        ),
+        h('div', null, 'Shows: ', h('b', null, parsed.newShowCount), ' new', parsed.existingShowCount > 0 ? h('span', null, ' · ', h('b', null, parsed.existingShowCount), ' already on site (will reuse)') : null),
+        h('div', null, 'Tickets: ', h('b', null, parsed.newTicketCount), ' new', parsed.dupTicketCount > 0 ? h('span', null, ' · ', h('b', null, parsed.dupTicketCount), ' already recorded (will skip)') : null),
+        h('div', null, 'Friends: ', h('b', null, matchedFriendCount), ' matched', parsed.unknownColumns.length > 0 ? h('span', null, ' · ', h('b', null, parsed.unknownColumns.length), ' new (', parsed.unknownColumns.join(', '), ')') : null),
         parsed.errors.length > 0 && h('div', { style: { color: 'var(--red)', marginTop: 6, fontSize: 12 } },
           '⚠ ', parsed.errors.length, ' row(s) skipped due to bad dates'
         ),
