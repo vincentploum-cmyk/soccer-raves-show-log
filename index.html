@@ -1027,10 +1027,12 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       if (cv.price) setTicketPrice(cv.price);
       if (dc.price) setDicePrice(dc.price);
       setCrowdvoltLoaded(true);
-      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
+      // Strip query strings from both source URLs so we always cache the bare image.
       // Dice's og:image embeds imgix params (rect/w/h) that pre-crop the source poster
-      // into a 1300x630 social-card banner. We want the original poster so our square
-      // thumbnail can crop it cleanly from the top — strip the query string.
+      // into a 1300x630 social-card banner; the bare URL serves the full poster, which
+      // crops cleanly from the top in a square thumbnail. Apply the same to CrowdVolt
+      // for consistency.
+      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
       const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
       const chosen = dcImage || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
@@ -2038,7 +2040,7 @@ function FriendRow({ show, friendId, friends }) {
         show.crowdvolt_url ? tryFetch(show.crowdvolt_url) : Promise.resolve({}),
         show.dice_url ? tryFetch(show.dice_url) : Promise.resolve({}),
       ]);
-      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl : null;
+      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
       const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
       const chosen = dcImage || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
