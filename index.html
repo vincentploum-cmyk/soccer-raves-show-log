@@ -1021,8 +1021,8 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.imageUrl || null);
     (async () => {
       try {
-        let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
-        if (!imageUrl && show.crowdvolt_url) imageUrl = await tryFetch(show.crowdvolt_url);
+        let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
+        if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
         await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
       } catch {
         await sb.from('shows').update({ artist_image_url: '' }).eq('id', show.id);
