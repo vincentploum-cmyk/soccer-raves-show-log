@@ -1024,8 +1024,8 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     attemptedImageFetches.add(show.id);
     const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
     (async () => {
-      let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
-      if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
+      let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
+      if (!imageUrl && show.crowdvolt_url) imageUrl = await tryFetch(show.crowdvolt_url);
       // Empty string = "we tried both, nothing found" → render the gradient fallback and don't retry.
       await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
     })();
@@ -2142,10 +2142,10 @@ function EditShowModal({ show, onClose, onSave }) {
   const refreshImage = async () => {
     setRefreshing(true);
     try {
-      // Re-run the fetch in the same Crowdvolt-first order, then save the result.
+      // Re-run the fetch in Dice-first → CrowdVolt-second order.
       const tryFetch = (url) => fetch(`/api/fetch-og-image?url=${encodeURIComponent(url)}`).then(r => r.json()).then(d => d.image || null).catch(() => null);
-      let imageUrl = show.crowdvolt_url ? await tryFetch(show.crowdvolt_url) : null;
-      if (!imageUrl && show.dice_url) imageUrl = await tryFetch(show.dice_url);
+      let imageUrl = show.dice_url ? await tryFetch(show.dice_url) : null;
+      if (!imageUrl && show.crowdvolt_url) imageUrl = await tryFetch(show.crowdvolt_url);
       attemptedImageFetches.delete(show.id);
       await sb.from('shows').update({ artist_image_url: imageUrl || '' }).eq('id', show.id);
     } finally {
