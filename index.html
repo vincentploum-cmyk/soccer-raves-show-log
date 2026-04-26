@@ -479,6 +479,7 @@ function App() {
   const [shows, setShows] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [reactions, setReactions] = useState([]);
+  const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(() => {
     const saved = localStorage.getItem('currentUserId');
@@ -515,16 +516,18 @@ function App() {
   // Load + realtime
   useEffect(() => {
     (async () => {
-      const [f, s, t, r] = await Promise.all([
+      const [f, s, t, r, v] = await Promise.all([
         sb.from('friends').select('*').order('name'),
         sb.from('shows').select('*').order('date', { ascending: true }),
         sb.from('tickets').select('*'),
         sb.from('reactions').select('*'),
+        sb.from('visits').select('*').order('opened_at', { ascending: false }).limit(200),
       ]);
       setFriends(f.data || []);
       setShows(s.data || []);
       setTickets(t.data || []);
       setReactions(r.data || []);
+      setVisits(v.data || []);
       setLoading(false);
       // Fix Burning Man date to September 2026
       const bm = (s.data || []).find(show => show.artist?.toLowerCase().includes('burning man'));
@@ -546,6 +549,9 @@ function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (p) => {
         setFriends((cur) => applyChange(cur, p));
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, (p) => {
+        setVisits((cur) => applyChange(cur, p));
+      })
       .subscribe();
 
     return () => { sb.removeChannel(ch); };
@@ -563,6 +569,19 @@ function App() {
 
   const currentUser = friends.find((f) => f.id === currentUserId);
   const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
+
+  // Record a visit when this user lands on the page. Throttled to once per 10 minutes
+  // per browser to avoid flooding the log on every refresh / tab focus.
+  useEffect(() => {
+    if (!currentUser) return;
+    const key = `lastVisitLogged_${currentUser.id}`;
+    const last = parseInt(localStorage.getItem(key) || '0', 10);
+    if (Date.now() - last < 10 * 60 * 1000) return;
+    localStorage.setItem(key, String(Date.now()));
+    sb.from('visits').insert({ friend_id: currentUser.id }).select().single().then(({ data }) => {
+      if (data) setVisits(cur => cur.some(v => v.id === data.id) ? cur : [data, ...cur]);
+    });
+  }, [currentUser?.id]);
 
   const switchUser = (id) => {
     setCurrentUserId(id);
@@ -785,7 +804,7 @@ function App() {
       onEditShow: (showId) => setEditShowModal(showId),
       onAddTickets: (showId) => setAddTicketsModal({ showId, friendId: currentUser?.id }),
     }),
-    tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched }),
+    tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched, visits }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
       selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
@@ -908,7 +927,7 @@ function Hero({ totals }) {
 
 // ===== Shows view =====
 // ===== Leaderboard =====
-function LeaderboardView({ friends, shows }) {
+function LeaderboardView({ friends, shows, visits }) {
   const currentYear = new Date().getFullYear();
   const years = useMemo(() => {
     const ys = new Set(shows.map(s => s.date?.slice(0, 4)).filter(Boolean));
@@ -953,7 +972,44 @@ function LeaderboardView({ friends, shows }) {
         h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: 28, letterSpacing: '-0.03em', color: i === 0 ? '#B5FF5A' : '#999' } }, r.count)
       )
     ),
-    rows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, 'No data yet'))
+    rows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, 'No data yet')),
+    h(VisitLog, { visits, friends })
+  );
+}
+
+function VisitLog({ visits, friends }) {
+  const friendsById = useMemo(() => Object.fromEntries((friends || []).map(f => [f.id, f])), [friends]);
+  const sorted = useMemo(() => [...(visits || [])].sort((a, b) => (b.opened_at || '').localeCompare(a.opened_at || '')).slice(0, 50), [visits]);
+  if (!sorted.length) return null;
+  const fmtRelative = (iso) => {
+    const ms = Date.now() - new Date(iso).getTime();
+    const m = Math.round(ms / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    const h = Math.round(m / 60);
+    if (h < 24) return h + 'h ago';
+    const d = Math.round(h / 24);
+    return d + 'd ago';
+  };
+  const fmtClock = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+  return h('div', { style: { marginTop: 28 } },
+    h('div', { className: 'section-divider' }, '👀 Recently here'),
+    h('div', { style: { background: 'var(--surface)', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 6 } },
+      sorted.map(v => {
+        const f = friendsById[v.friend_id];
+        return h('div', { key: v.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 10 } },
+          f ? h(Avatar, { friend: f, size: 28 }) : h('div', { style: { width: 28, height: 28, borderRadius: '50%', background: 'rgba(0,0,0,0.06)' } }),
+          h('div', { style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' } },
+            h('span', { style: { fontWeight: 600, fontSize: 14 } }, f?.name || 'Unknown'),
+            h('span', { style: { fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-3)' } }, fmtClock(v.opened_at))
+          ),
+          h('span', { style: { fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-2)' } }, fmtRelative(v.opened_at))
+        );
+      })
+    )
   );
 }
 
