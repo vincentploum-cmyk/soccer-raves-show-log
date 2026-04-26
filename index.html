@@ -568,7 +568,22 @@ function App() {
   };
 
   const currentUser = friends.find((f) => f.id === currentUserId);
-  const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
+  const isAdminName = (name) => ['Tim', 'Vincent'].some(n => name?.startsWith(n));
+  // Once a Tim or Vincent identifies themselves on this browser we remember which
+  // friend row is them, so they always have the admin UI even after switching to
+  // someone else's profile to add tickets on their behalf.
+  const adminIdentityId = (() => {
+    const stored = parseInt(localStorage.getItem('adminIdentityId') || '0', 10);
+    if (stored && friends.some(f => f.id === stored && isAdminName(f.name))) return stored;
+    return null;
+  })();
+  useEffect(() => {
+    if (currentUser && isAdminName(currentUser.name) && parseInt(localStorage.getItem('adminIdentityId') || '0', 10) !== currentUser.id) {
+      localStorage.setItem('adminIdentityId', String(currentUser.id));
+    }
+  }, [currentUser?.id, currentUser?.name]);
+  const adminIdentity = adminIdentityId ? friends.find(f => f.id === adminIdentityId) : null;
+  const isAdmin = isAdminName(currentUser?.name) || !!adminIdentity;
 
   // Record a visit when this user lands on the page. Throttled to once per 10 minutes
   // per browser to avoid flooding the log on every refresh / tab focus.
@@ -769,6 +784,12 @@ function App() {
                 friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
                 h('option', { value: 'new' }, '＋ Create profile')
               ),
+              // Quick switch-back when an admin is posing as someone else.
+              adminIdentity && currentUser?.id !== adminIdentity.id && h('button', {
+                className: 'user-picker-new',
+                title: `Switch back to ${adminIdentity.name}`,
+                onClick: () => switchUser(adminIdentity.id),
+              }, '↶ ' + adminIdentity.name.split(' ')[0]),
               currentUser
                 ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
                 : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
