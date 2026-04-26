@@ -552,7 +552,10 @@ function App() {
   }, []);
 
   const applyChange = (list, p) => {
-    if (p.eventType === 'INSERT') return [...list, p.new];
+    if (p.eventType === 'INSERT') {
+      if (list.some(x => x.id === p.new.id)) return list; // already inserted optimistically
+      return [...list, p.new];
+    }
     if (p.eventType === 'UPDATE') return list.map((x) => x.id === p.new.id ? p.new : x);
     if (p.eventType === 'DELETE') return list.filter((x) => x.id !== p.old.id);
     return list;
@@ -659,19 +662,24 @@ function App() {
   };
 
   const setTicketCount = async (showId, friendId, count, actorId) => {
+    const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
     if (count === 0) {
-      const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
       if (existing) {
-        await sb.from('tickets').delete().eq('id', existing.id);
+        const { error } = await sb.from('tickets').delete().eq('id', existing.id);
+        if (error) { showToast('Error: ' + error.message); return; }
+        setTickets(cur => cur.filter(t => t.id !== existing.id));
       }
       showToast('Removed');
       return;
     }
-    const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
     if (existing) {
-      await sb.from('tickets').update({ count, added_by_friend_id: actorId, updated_at: new Date().toISOString() }).eq('id', existing.id);
+      const { data, error } = await sb.from('tickets').update({ count, added_by_friend_id: actorId, updated_at: new Date().toISOString() }).eq('id', existing.id).select().single();
+      if (error) { showToast('Error: ' + error.message); return; }
+      if (data) setTickets(cur => cur.map(t => t.id === data.id ? data : t));
     } else {
-      await sb.from('tickets').insert({ show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId });
+      const { data, error } = await sb.from('tickets').insert({ show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId }).select().single();
+      if (error) { showToast('Error: ' + error.message); return; }
+      if (data) setTickets(cur => cur.some(t => t.id === data.id) ? cur : [...cur, data]);
     }
     showToast('Saved');
   };
