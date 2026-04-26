@@ -772,29 +772,27 @@ function App() {
       // User picker
       h('div', { className: 'user-picker', style: { borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 0 } },
         h(Avatar, { friend: currentUser, size: 28 }),
-        isAdmin
-          ? h(React.Fragment, null,
-              h('span', { className: 'user-picker-label' }, 'you are'),
-              h('select', { value: currentUserId || '', onChange: (e) => {
-                const v = e.target.value;
-                if (v === 'new') { setProfileTarget(false); return; }
-                switchUser(v ? parseInt(v) : null);
-              }},
-                h('option', { value: '' }, '— pick name —'),
-                friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
-                h('option', { value: 'new' }, '＋ Create profile')
-              ),
-              // Quick switch-back when an admin is posing as someone else.
-              adminIdentity && currentUser?.id !== adminIdentity.id && h('button', {
-                className: 'user-picker-new',
-                title: `Switch back to ${adminIdentity.name}`,
-                onClick: () => switchUser(adminIdentity.id),
-              }, '↶ ' + adminIdentity.name.split(' ')[0]),
-              currentUser
-                ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
-                : h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
-            )
-          : h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'my profile')
+        h(React.Fragment, null,
+          h('span', { className: 'user-picker-label' }, 'you are'),
+          h('select', { value: currentUserId || '', onChange: (e) => {
+            const v = e.target.value;
+            if (v === 'new') { setProfileTarget(false); return; }
+            switchUser(v ? parseInt(v) : null);
+          }},
+            h('option', { value: '' }, '— pick name —'),
+            friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
+            isAdmin && h('option', { value: 'new' }, '＋ Create profile')
+          ),
+          // Quick switch-back when an admin is posing as someone else.
+          adminIdentity && currentUser?.id !== adminIdentity.id && h('button', {
+            className: 'user-picker-new',
+            title: `Switch back to ${adminIdentity.name}`,
+            onClick: () => switchUser(adminIdentity.id),
+          }, '↶ ' + adminIdentity.name.split(' ')[0]),
+          currentUser
+            ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
+            : isAdmin && h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
+        )
       ),
       // Friend roster + profile preview
       friends.length > 0 && h(FriendRoster, {
