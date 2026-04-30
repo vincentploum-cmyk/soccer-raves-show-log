@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="light dark" />
-<meta name="supported-color-schemes" content="light dark" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
 <title>Soccer Raves Show Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1731,7 +1731,7 @@ function Avatar({ friend, size = 36, style: extraStyle, zoomable = false }) {
 function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
-  const sortedFriends = [...friends].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedFriends = [...friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   return h('div', { style: { padding: '8px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
     h('div', { className: 'roster-picker', style: { display: 'flex', alignItems: 'center', gap: 8 } },
       h('span', { className: 'user-picker-label' }, 'profiles'),
