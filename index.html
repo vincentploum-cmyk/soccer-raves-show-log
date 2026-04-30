@@ -58,6 +58,8 @@
   html.night .chip-1 { background: rgba(255,255,255,0.12); color: #ddd; }
   html.night .chip-past { background: rgba(255,255,255,0.07); color: #888; }
   html.night .chip-past:hover { background: rgba(255,255,255,0.07); }
+  html.night .chip-interested { border-color: rgba(255,255,255,0.25); color: #999; }
+  html.night .chip-interested:hover { background: rgba(255,255,255,0.06); }
   html.night .chip-count { background: rgba(255,255,255,0.15); }
   html.night .friend-row:hover { background: #1e1e2e !important; }
   html.night .friend-row:active { background: #16161e !important; }
@@ -186,6 +188,7 @@
   .badge-past { background: rgba(0,0,0,0.06); color: #999; }
   .badge-cancelled { background: rgba(255,61,90,0.12); color: var(--red); }
   .badge-going { background: rgba(108,60,255,0.12); color: var(--purple); }
+  .badge-interested { background: rgba(0,0,0,0.06); color: #777; }
 
   /* Chips */
   .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
@@ -199,6 +202,8 @@
   .chip-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: rgba(0,0,0,0.10); padding: 1px 5px; border-radius: 999px; font-weight: 600; }
   .chip-past { background: rgba(0,0,0,0.04); color: #999; text-decoration: line-through; cursor: default; }
   .chip-past:hover { background: rgba(0,0,0,0.04); }
+  .chip-interested { background: transparent; border: 1.5px dashed rgba(0,0,0,0.25); color: #888; font-style: italic; }
+  .chip-interested:hover { background: rgba(0,0,0,0.04); }
   .chip-add { background: #0F0F0F; color: #fff; font-weight: 600; }
   .chip-add:hover { background: #333; }
 
@@ -717,15 +722,14 @@ function App() {
   };
 
   const setTicketCount = async (showId, friendId, count, actorId) => {
-    if (count === 0) {
-      // Delete by composite key so a stale local cache (missing the row) still
-      // clears any server-side row that exists.
+    if (count < 0) {
       const { error } = await sb.from('tickets').delete().eq('show_id', showId).eq('friend_id', friendId);
       if (error) { showToast('Error: ' + (error.message || error.code || JSON.stringify(error))); return; }
       setTickets(cur => cur.filter(t => !(t.show_id === showId && t.friend_id === friendId)));
       showToast('Removed');
       return;
     }
+    // count === 0 → interested (no ticket yet); count >= 1 → has ticket(s)
     const payload = { show_id: showId, friend_id: friendId, count };
     const { data, error } = await sb.from('tickets').upsert(payload, { onConflict: 'show_id,friend_id' }).select();
     if (error) {
@@ -741,7 +745,7 @@ function App() {
       const without = cur.filter(t => t.id !== row.id && !(t.show_id === showId && t.friend_id === friendId));
       return [...without, row];
     });
-    showToast('Saved');
+    showToast(count === 0 ? 'Marked as interested' : 'Saved');
   };
 
   const toggleReaction = async (showId, friendId, vote) => {
@@ -1151,10 +1155,11 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
 // ===== Show card =====
 function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
   const going = show.tickets.filter((t) => t.count > 0);
+  const interested = show.tickets.filter((t) => t.count === 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
-  const goingFriendIds = new Set(going.map((t) => t.friend_id));
-  const nonGoing = friends.filter((f) => !goingFriendIds.has(f.id));
+  const takenFriendIds = new Set(show.tickets.map((t) => t.friend_id));
+  const nonGoing = friends.filter((f) => !takenFriendIds.has(f.id));
 
   const [ticketPrice, setTicketPrice] = useState(null);
   const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
@@ -1196,6 +1201,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const artistHref = `https://open.spotify.com/search/${encodeURIComponent(show.artist || '')}`;
 
   const myTicket = currentUser && show.tickets.find((t) => t.friend_id === currentUser.id && t.count > 0);
+  const myInterest = !myTicket && currentUser && show.tickets.find((t) => t.friend_id === currentUser.id && t.count === 0);
   const myReaction = currentUser && show.reactions.find((r) => r.friend_id === currentUser.id);
 
   const pctUp = (show.upvotes.length + show.downvotes.length) > 0
@@ -1216,6 +1222,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
               h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'nowrap' } },
                 h('span', null, formatDate(show.date)),
                 myTicket && h('span', { className: 'badge badge-going' }, myTicket.count > 1 ? `you're going ×${myTicket.count}` : "you're going!"),
+                myInterest && h('span', { className: 'badge badge-interested' }, "you're interested"),
               ),
               show.past && h('span', { className: 'badge badge-past' }, 'past'),
               !show.past && popular && h('span', { className: 'badge badge-hot' }, '🔥 popular'),
@@ -1258,6 +1265,18 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         },
           friend.avatar_url && h('img', { src: friend.avatar_url, style: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } }),
           friend.name, isMe && !show.past ? ' ✓' : null, h('span', { className: 'chip-count' }, t.count));
+      }),
+      !show.past && interested.map((t) => {
+        const friend = friendsById[t.friend_id];
+        if (!friend) return null;
+        return h('span', {
+          key: 'i' + t.id,
+          className: 'chip chip-interested',
+          onClick: currentUser ? () => onEditChip(show.id, friend.id) : null,
+          title: `${friend.name} is interested — click to edit`,
+        },
+          friend.avatar_url && h('img', { src: friend.avatar_url, style: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } }),
+          friend.name);
       }),
     ),
     // Reactions (past shows only)
@@ -2012,10 +2031,10 @@ function ProfileModal({ friend, onClose, onSave }) {
 
 // ===== Edit chip modal =====
 function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }) {
-  const friendsWithoutTickets = friends.filter((f) => !show.tickets.some((t) => t.friend_id === f.id && t.count > 0));
+  const friendsWithoutTickets = friends.filter((f) => !show.tickets.some((t) => t.friend_id === f.id));
   const defaultPickedId = friendId ?? friendsWithoutTickets[0]?.id ?? friends[0]?.id;
   const existing = friendId ? show.tickets.find((t) => t.friend_id === friendId) : null;
-  const [count, setCount] = useState(existing?.count || 1);
+  const [count, setCount] = useState(existing ? existing.count : 0);
   const [actorId, setActorId] = useState(currentUser?.id || friendId);
   const [saving, setSaving] = useState(false);
   const [pickedFriend, setPickedFriend] = useState(defaultPickedId);
@@ -2050,14 +2069,19 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
         )
       ),
       h('div', { className: 'stepper' },
-        h('button', { className: 'stepper-btn', onClick: () => setCount(Math.max(0, count - 1)), disabled: count === 0 }, '−'),
+        h('button', { className: 'stepper-btn', onClick: () => setCount(count - 1), disabled: count <= -1 }, '−'),
         h('div', { style: { textAlign: 'center' } },
-          h('div', { className: 'stepper-count' }, count),
-          h('div', { style: { fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } }, count === 1 ? 'ticket' : 'tickets')
+          count === -1
+            ? h('div', { className: 'stepper-count' }, '0')
+            : count === 0
+            ? h('div', { className: 'stepper-count', style: { fontSize: 18 } }, 'Interested')
+            : h('div', { className: 'stepper-count' }, count),
+          h('div', { style: { fontSize: 10, color: count === -1 ? 'var(--red)' : '#666', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } },
+            count === -1 ? 'remove' : count === 0 ? '' : count === 1 ? 'ticket' : 'tickets')
         ),
         h('button', { className: 'stepper-btn', onClick: () => setCount(count + 1) }, '+')
       ),
-      count === 0 && h('p', { style: { fontSize: 11, color: 'var(--red)', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } }, (activeFriend?.name) + ' will be removed from this show'),
+      count === -1 && h('p', { style: { fontSize: 11, color: 'var(--red)', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } }, (activeFriend?.name) + ' will be removed from this show'),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
         h('button', { className: 'primary-btn', onClick: submit, disabled: saving }, saving ? 'Saving...' : 'Save')
@@ -2072,6 +2096,7 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
   if (!friend) return h('div', { className: 'empty-state' }, h('h3', null, 'Pick a friend'), h('p', null, 'Or create a profile to get started'));
 
   const myShows = shows.filter((s) => s.tickets.some((t) => t.friend_id === friend.id && t.count > 0));
+  const interestedShows = shows.filter((s) => !s.past && s.tickets.some((t) => t.friend_id === friend.id && t.count === 0));
   const upcoming = myShows.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const past = myShows.filter((s) => s.past).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
@@ -2134,11 +2159,15 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
       upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
     ),
+    interestedShows.length > 0 && h('div', { className: 'section-divider' }, 'Interested'),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+      interestedShows.map((s) => h(FriendRow, { key: 'i' + s.id, show: s, friendId: friend.id, friends })),
+    ),
     past.length > 0 && h('div', { className: 'section-divider' }, 'Past'),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
       past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
     ),
-    myShows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, friend.name + ' has no shows yet'))
+    myShows.length === 0 && interestedShows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, friend.name + ' has no shows yet'))
   );
 }
 function FriendRow({ show, friendId, friends }) {
@@ -2193,7 +2222,9 @@ function FriendRow({ show, friendId, friends }) {
         )
       ),
       myReact && h('span', { style: { fontSize: 14 } }, myReact.vote === 1 ? '👍' : '👎'),
-      h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix'),
+      t.count === 0
+        ? h('span', { className: 'chip chip-interested' }, 'Interested')
+        : h('span', { className: 'chip ' + (t.count >= 2 ? 'chip-vip' : 'chip-1') }, t.count + ' tix'),
       h('span', { style: { fontSize: 12, color: '#999', marginLeft: 4 } }, expanded ? '▲' : '▼'),
     ),
     expanded && h('div', { style: { marginTop: 12, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 12 }, onClick: e => e.stopPropagation() },
