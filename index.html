@@ -41,7 +41,8 @@
     --danger-bg: #2a1018;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { background: var(--html-bg); transition: background 1s; }
+  html { background: var(--html-bg); transition: background 1s; color-scheme: light; }
+  html.night { color-scheme: dark; }
   body { min-height: 100vh; background: transparent; color: var(--body-color); font-family: 'Space Grotesk', sans-serif; transition: color 1s; }
 
   /* Night-mode overrides for white UI panels */
@@ -759,6 +760,37 @@ function App() {
     showToast(`${friend.name} removed`);
   };
 
+  // One-shot: walk every show with a CrowdVolt/Dice URL but no artist_image_url,
+  // refetch it through the same resolver ShowCard uses, and persist any image
+  // we now accept under the loosened CrowdVolt rule. Lets us heal historical
+  // rows in one click instead of waiting for each card to mount.
+  const refreshMissingImages = async () => {
+    const candidates = shows.filter(s => !s.artist_image_url && (s.crowdvolt_url || s.dice_url));
+    if (!candidates.length) { showToast('No shows missing images'); return; }
+    showToast(`Refreshing ${candidates.length} image${candidates.length === 1 ? '' : 's'}…`);
+    const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).catch(() => ({}));
+    const isGenericCrowdvoltCard = (u) => /\/opengraph-image\b/i.test(u);
+    let updated = 0;
+    const queue = [...candidates];
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      while (queue.length) {
+        const s = queue.shift();
+        const [cv, dc] = await Promise.all([
+          s.crowdvolt_url ? tryFetch(s.crowdvolt_url) : Promise.resolve({}),
+          s.dice_url ? tryFetch(s.dice_url) : Promise.resolve({}),
+        ]);
+        const cvImage = cv.imageUrl && !isGenericCrowdvoltCard(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
+        const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
+        const chosen = dcImage || cvImage || null;
+        if (chosen) {
+          await sb.from('shows').update({ artist_image_url: chosen }).eq('id', s.id);
+          updated++;
+        }
+      }
+    }));
+    showToast(`Refreshed ${updated} of ${candidates.length} image${candidates.length === 1 ? '' : 's'}`);
+  };
+
   if (loading) return h('div', { className: 'loading' }, 'loading');
 
 
@@ -821,6 +853,7 @@ function App() {
       onAdd: () => setAddModalOpen(true),
       onAddFriend: () => setAddFriendModalOpen(true),
       onImport: () => setImportModalOpen(true),
+      onRefreshImages: refreshMissingImages,
       onEditChip: (showId, friendId) => setEditModal({ showId, friendId }),
       onToggleReaction: toggleReaction,
       onDeleteShow: deleteShow,
@@ -1036,7 +1069,7 @@ function VisitLog({ visits, friends }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -1066,6 +1099,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
       }),
       h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
       isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet' }, '↥ Import'),
+      isAdmin && h('button', { className: 'ghost-btn', onClick: onRefreshImages, title: 'Re-fetch artist images for shows that are missing one' }, '↻ Refresh images'),
       h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show'),
     ),
     !currentUser && h('div', { style: { padding: '12px 16px', background: 'rgba(255, 170, 0, 0.1)', border: '1px solid rgba(255, 170, 0, 0.3)', borderRadius: 10, marginBottom: 14, fontSize: 13, color: 'var(--amber)' } },
@@ -1099,9 +1133,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
   // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
-  // CrowdVolt's og:image is only accepted when it's an event-specific portrait
-  // (img.crowdvolt.com/<uuid>); the generic site share card (crowdvolt.com/opengraph-image.png)
-  // is treated as "no image."
+  // CrowdVolt's og:image is accepted unless it's the generic site share card
+  // (any URL whose path matches /opengraph-image…). Restricting to a single CDN
+  // host (img.crowdvolt.com) silently dropped legit images when CrowdVolt
+  // rotated their CDN.
   // Both fetches are awaited together so the decision is deterministic.
   useEffect(() => {
     if (!show.crowdvolt_url && !show.dice_url) return;
@@ -1119,7 +1154,8 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       // into a 1300x630 social-card banner; the bare URL serves the full poster, which
       // crops cleanly from the top in a square thumbnail. Apply the same to CrowdVolt
       // for consistency.
-      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
+      const isGenericCrowdvoltCard = (u) => /\/opengraph-image\b/i.test(u);
+      const cvImage = cv.imageUrl && !isGenericCrowdvoltCard(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
       const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
       const chosen = dcImage || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
