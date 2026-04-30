@@ -66,8 +66,6 @@
   html.night .friend-row { background: var(--card-bg) !important; color: var(--text); }
   html.night .profile-card-name,
   html.night .profile-card-meta,
-  html.night .roster-chip-name { color: var(--text-2); }
-  html.night .roster-chip.active .roster-chip-name { color: var(--text); }
   html.night .tab { color: var(--text-2); }
   html.night .tab.active { color: var(--text); border-bottom-color: var(--lime); }
   html.night .tabs { border-bottom-color: var(--border); }
@@ -340,13 +338,8 @@
   .genre-chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; background: rgba(0,0,0,0.06); color: #444; font-weight: 500; }
 
   /* Friend roster */
-  .friends-roster { display: flex; gap: 14px; overflow-x: auto; padding: 14px 0 6px; scrollbar-width: none; }
-  .friends-roster::-webkit-scrollbar { display: none; }
-  .roster-chip { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0; background: none; border: none; padding: 0; }
-  .roster-chip-name { font-size: 10px; color: #999; font-family: 'JetBrains Mono', monospace; max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .roster-chip.active .roster-chip-name { color: #0F0F0F; font-weight: 600; }
-  .roster-chip-ring { border-radius: 50%; outline: 2.5px solid transparent; outline-offset: 2px; transition: outline-color 0.15s; display: inline-flex; }
-  .roster-chip.active .roster-chip-ring { outline-color: #B5FF5A; }
+  .roster-picker select { background: rgba(0,0,0,0.06); border: none; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: #0F0F0F; cursor: pointer; width: auto; }
+  html.night .roster-picker select { background: rgba(255,255,255,0.07); color: var(--text); }
 
   /* Profile preview */
   .profile-preview { background: #fff; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04); display: flex; align-items: flex-start; gap: 14px; animation: fadeIn 0.15s; }
@@ -1728,37 +1721,19 @@ function Avatar({ friend, size = 36, style: extraStyle, zoomable = false }) {
 function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
-  const rosterRef = React.useRef(null);
-  useEffect(() => {
-    const el = rosterRef.current;
-    if (!el) return;
-    const handler = (e) => {
-      e.preventDefault();
-      el.scrollLeft += e.deltaY + e.deltaX;
-    };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  }, []);
-  const scroll = (dir) => { if (rosterRef.current) rosterRef.current.scrollBy({ left: dir * 160, behavior: 'smooth' }); };
-  return h('div', { style: { padding: '4px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
-    h('div', { style: { position: 'relative', display: 'flex', alignItems: 'center' } },
-      h('button', { onClick: () => scroll(-1), style: { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0 4px', color: 'var(--text-2)', lineHeight: 1 } }, '‹'),
-      h('div', { className: 'friends-roster', ref: rosterRef },
-      friends.map((f) => {
-        const isActive = f.id === viewedFriendId;
-        return h('button', {
-          key: f.id,
-          className: 'roster-chip' + (isActive ? ' active' : ''),
-          onClick: () => setViewedFriendId(isActive ? null : f.id),
-        },
-          h('span', { className: 'roster-chip-ring' }, h(Avatar, { friend: f, size: 44 })),
-          h('span', { className: 'roster-chip-name' }, f.name.split(' ')[0])
-        );
-      })
-      ),
-      h('button', { onClick: () => scroll(1), style: { flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '0 4px', color: 'var(--text-2)', lineHeight: 1 } }, '›'),
+  const sortedFriends = [...friends].sort((a, b) => a.name.localeCompare(b.name));
+  return h('div', { style: { padding: '8px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
+    h('div', { className: 'roster-picker', style: { display: 'flex', alignItems: 'center', gap: 8 } },
+      h('span', { className: 'user-picker-label' }, 'profiles'),
+      h('select', {
+        value: viewedFriendId || '',
+        onChange: (e) => setViewedFriendId(e.target.value ? parseInt(e.target.value) : null),
+      },
+        h('option', { value: '' }, 'Browse…'),
+        sortedFriends.map((f) => h('option', { key: f.id, value: f.id }, f.name))
+      )
     ),
-    viewed && h('div', { className: 'profile-preview' },
+    viewed && h('div', { className: 'profile-preview', style: { marginTop: 12 } },
       h(Avatar, { friend: viewed, size: 56, zoomable: true }),
       h('div', { style: { flex: 1, minWidth: 0 } },
         h('div', { className: 'profile-card-name' }, viewed.name),
