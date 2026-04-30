@@ -700,22 +700,26 @@ function App() {
       // Delete by composite key so a stale local cache (missing the row) still
       // clears any server-side row that exists.
       const { error } = await sb.from('tickets').delete().eq('show_id', showId).eq('friend_id', friendId);
-      if (error) { showToast('Error: ' + error.message); return; }
+      if (error) { showToast('Error: ' + (error.message || error.code || JSON.stringify(error))); return; }
       setTickets(cur => cur.filter(t => !(t.show_id === showId && t.friend_id === friendId)));
       showToast('Removed');
       return;
     }
     // Upsert on the (show_id, friend_id) unique constraint so we don't trip the
-    // tickets_show_id_friend_id_key when the local cache is stale. We deliberately
-    // do NOT pass updated_at — the DB owns that column (default/trigger), and
-    // manually setting it from the client raced with the trigger and produced
-    // rows that quietly disappeared after refresh.
-    const { data, error } = await sb.from('tickets').upsert(
-      { show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId },
-      { onConflict: 'show_id,friend_id' }
-    ).select();
-    if (error) { showToast('Error: ' + error.message); return; }
+    // tickets_show_id_friend_id_key when the local cache is stale.
+    // We send only the columns the imported rows have (show_id, friend_id, count).
+    // Earlier versions also passed updated_at and added_by_friend_id; both fought
+    // the DB defaults / RLS — the row would come back from RETURNING but never
+    // actually persist, so the pill painted but vanished after refresh.
+    const payload = { show_id: showId, friend_id: friendId, count };
+    const { data, error } = await sb.from('tickets').upsert(payload, { onConflict: 'show_id,friend_id' }).select();
+    if (error) {
+      console.error('[tickets upsert]', error, 'payload:', payload);
+      showToast('Error: ' + (error.message || error.code || JSON.stringify(error)));
+      return;
+    }
     if (!data || data.length === 0) {
+      console.error('[tickets upsert] no rows returned. payload:', payload);
       showToast('Save returned no rows — check Supabase RLS / triggers');
       return;
     }
