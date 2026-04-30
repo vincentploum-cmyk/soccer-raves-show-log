@@ -698,23 +698,27 @@ function App() {
   const setTicketCount = async (showId, friendId, count, actorId) => {
     const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
     if (count === 0) {
-      if (existing) {
-        const { error } = await sb.from('tickets').delete().eq('id', existing.id);
-        if (error) { showToast('Error: ' + error.message); return; }
-        setTickets(cur => cur.filter(t => t.id !== existing.id));
-      }
+      // Delete by composite key so a stale local cache (missing the row) still
+      // clears any server-side row that exists.
+      const { error } = await sb.from('tickets').delete().eq('show_id', showId).eq('friend_id', friendId);
+      if (error) { showToast('Error: ' + error.message); return; }
+      setTickets(cur => cur.filter(t => !(t.show_id === showId && t.friend_id === friendId)));
       showToast('Removed');
       return;
     }
-    if (existing) {
-      const { data, error } = await sb.from('tickets').update({ count, added_by_friend_id: actorId, updated_at: new Date().toISOString() }).eq('id', existing.id).select().single();
-      if (error) { showToast('Error: ' + error.message); return; }
-      if (data) setTickets(cur => cur.map(t => t.id === data.id ? data : t));
-    } else {
-      const { data, error } = await sb.from('tickets').insert({ show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId }).select().single();
-      if (error) { showToast('Error: ' + error.message); return; }
-      if (data) setTickets(cur => cur.some(t => t.id === data.id) ? cur : [...cur, data]);
-    }
+    // Upsert on the (show_id, friend_id) unique constraint. Insert-vs-update based
+    // on local state breaks when the cache is stale (realtime miss, prior optimistic
+    // write, etc.) — every retry would then hit "duplicate key value violates unique
+    // constraint" and the user couldn't add tickets to any show.
+    const { data, error } = await sb.from('tickets').upsert(
+      { show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId, updated_at: new Date().toISOString() },
+      { onConflict: 'show_id,friend_id' }
+    ).select().single();
+    if (error) { showToast('Error: ' + error.message); return; }
+    if (data) setTickets(cur => {
+      const without = cur.filter(t => t.id !== data.id && !(t.show_id === showId && t.friend_id === friendId));
+      return [...without, data];
+    });
     showToast('Saved');
   };
 
