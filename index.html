@@ -544,7 +544,7 @@ function App() {
       ]);
       setFriends(f.data || []);
       setShows(s.data || []);
-      setTickets(t.data || []);
+      setTickets(t || []);
       setReactions(r.data || []);
       setVisits(v.data || []);
       setLoading(false);
