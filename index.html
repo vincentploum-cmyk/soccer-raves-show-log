@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light dark" />
+<meta name="supported-color-schemes" content="light dark" />
 <title>Soccer Raves Show Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -69,7 +71,7 @@
   html.night .tab { color: var(--text-2); }
   html.night .tab.active { color: var(--text); border-bottom-color: var(--lime); }
   html.night .tabs { border-bottom-color: var(--border); }
-  html.night input, html.night select, html.night textarea { background: rgba(255,255,255,0.07); color: var(--text); -webkit-text-fill-color: var(--text); }
+  html.night input, html.night select, html.night textarea { background: rgba(255,255,255,0.07); color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
   html.night input:focus, html.night select:focus { background: rgba(255,255,255,0.1); box-shadow: 0 0 0 2px rgba(255,255,255,0.14); }
   html.night option { background: #1a1a24; color: var(--text); }
   html.night .genre-chip { background: rgba(255,255,255,0.1); color: var(--text-2); }
@@ -102,7 +104,7 @@
   .bg-pattern .ball { position: absolute; background-image: url('soccer-ball.png'); background-size: contain; background-repeat: no-repeat; opacity: .22; filter: contrast(1.05); }
   body::before { content: ""; position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0.03) 0 1px, transparent 1px 3px); pointer-events: none; z-index: -1; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-  input, select, textarea { font-family: inherit; color: #0F0F0F; -webkit-text-fill-color: #0F0F0F; background: rgba(0,0,0,0.04); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; transition: background 0.15s, box-shadow 0.15s; width: 100%; }
+  input, select, textarea { font-family: inherit; color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; background: rgba(0,0,0,0.04); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; transition: background 0.15s, box-shadow 0.15s; width: 100%; }
   input:focus, select:focus, textarea:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px rgba(0,0,0,0.14); }
   ::placeholder { color: #999; }
   option { background: #fff; color: #0F0F0F; }
