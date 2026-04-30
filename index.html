@@ -724,6 +724,18 @@ function App() {
       return;
     }
     const row = data[0];
+    console.log('[tickets upsert] returned row:', row);
+
+    // Verification round-trip: re-SELECT the row from the anon role to confirm
+    // it actually committed (vs. only being returned by RETURNING from inside
+    // the same statement and then rolled back / deleted).
+    const verify = await sb.from('tickets').select('*').eq('id', row.id).maybeSingle();
+    console.log('[tickets verify]', verify);
+    if (!verify.data) {
+      showToast('Save did NOT persist — row missing on re-read. ' + (verify.error?.message || 'check console'));
+      return;
+    }
+
     setTickets(cur => {
       const without = cur.filter(t => t.id !== row.id && !(t.show_id === showId && t.friend_id === friendId));
       return [...without, row];
