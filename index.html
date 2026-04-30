@@ -104,7 +104,11 @@
   .bg-pattern .ball { position: absolute; background-image: url('soccer-ball.png'); background-size: contain; background-repeat: no-repeat; opacity: .22; filter: contrast(1.05); }
   body::before { content: ""; position: fixed; inset: 0; background-image: repeating-linear-gradient(to bottom, rgba(0,0,0,0.03) 0 1px, transparent 1px 3px); pointer-events: none; z-index: -1; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
-  input, select, textarea { font-family: inherit; color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; background: rgba(0,0,0,0.04); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; transition: background 0.15s, box-shadow 0.15s; width: 100%; }
+  input, select, textarea { font-family: inherit; color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; background: rgba(0,0,0,0.04); border: none; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; transition: background 0.15s, box-shadow 0.15s; width: 100%; appearance: none; -webkit-appearance: none; }
+  /* iOS Safari renders the date display in <input type="date"> via a pseudo-element
+     that doesn't inherit color from the input — override it explicitly. */
+  input::-webkit-date-and-time-value, input::-webkit-datetime-edit, input::-webkit-datetime-edit-fields-wrapper { color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; }
+  html.night input::-webkit-date-and-time-value, html.night input::-webkit-datetime-edit, html.night input::-webkit-datetime-edit-fields-wrapper { color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
   input:focus, select:focus, textarea:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px rgba(0,0,0,0.14); }
   ::placeholder { color: #999; }
   option { background: #fff; color: #0F0F0F; }
@@ -692,7 +696,6 @@ function App() {
   };
 
   const setTicketCount = async (showId, friendId, count, actorId) => {
-    const existing = tickets.find((t) => t.show_id === showId && t.friend_id === friendId);
     if (count === 0) {
       // Delete by composite key so a stale local cache (missing the row) still
       // clears any server-side row that exists.
@@ -702,18 +705,24 @@ function App() {
       showToast('Removed');
       return;
     }
-    // Upsert on the (show_id, friend_id) unique constraint. Insert-vs-update based
-    // on local state breaks when the cache is stale (realtime miss, prior optimistic
-    // write, etc.) — every retry would then hit "duplicate key value violates unique
-    // constraint" and the user couldn't add tickets to any show.
+    // Upsert on the (show_id, friend_id) unique constraint so we don't trip the
+    // tickets_show_id_friend_id_key when the local cache is stale. We deliberately
+    // do NOT pass updated_at — the DB owns that column (default/trigger), and
+    // manually setting it from the client raced with the trigger and produced
+    // rows that quietly disappeared after refresh.
     const { data, error } = await sb.from('tickets').upsert(
-      { show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId, updated_at: new Date().toISOString() },
+      { show_id: showId, friend_id: friendId, count, added_by_friend_id: actorId },
       { onConflict: 'show_id,friend_id' }
-    ).select().single();
+    ).select();
     if (error) { showToast('Error: ' + error.message); return; }
-    if (data) setTickets(cur => {
-      const without = cur.filter(t => t.id !== data.id && !(t.show_id === showId && t.friend_id === friendId));
-      return [...without, data];
+    if (!data || data.length === 0) {
+      showToast('Save returned no rows — check Supabase RLS / triggers');
+      return;
+    }
+    const row = data[0];
+    setTickets(cur => {
+      const without = cur.filter(t => t.id !== row.id && !(t.show_id === showId && t.friend_id === friendId));
+      return [...without, row];
     });
     showToast('Saved');
   };
