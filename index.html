@@ -755,18 +755,21 @@ function App() {
     showToast(`${friend.name} removed`);
   };
 
-  // One-shot: walk every show with a CrowdVolt/Dice URL but no artist_image_url,
-  // refetch it through the same resolver ShowCard uses, and persist any image
-  // we now accept under the loosened CrowdVolt rule. Lets us heal historical
-  // rows in one click instead of waiting for each card to mount.
+  // One-shot: walk every show that has any CrowdVolt/Dice URL, re-run the
+  // resolver ShowCard uses, and persist any image we now accept (different
+  // from what's already stored). Re-fetching even when artist_image_url is
+  // already set lets us replace stale URLs from before the CrowdVolt CDN
+  // rotation — without it, a row whose image points to an obsolete CDN
+  // never heals.
   const refreshMissingImages = async () => {
-    const candidates = shows.filter(s => !s.artist_image_url && (s.crowdvolt_url || s.dice_url));
-    if (!candidates.length) { showToast('No shows missing images'); return; }
-    showToast(`Refreshing ${candidates.length} image${candidates.length === 1 ? '' : 's'}…`);
+    const withUrls = shows.filter(s => s.crowdvolt_url || s.dice_url);
+    const noUrls = shows.filter(s => !s.crowdvolt_url && !s.dice_url && !s.artist_image_url);
+    if (!withUrls.length) { showToast('No shows have a CrowdVolt or Dice URL'); return; }
+    showToast(`Refreshing ${withUrls.length} show${withUrls.length === 1 ? '' : 's'}…`);
     const tryFetch = (url) => fetch(`/api/event-image?url=${encodeURIComponent(url)}`).then(r => r.json()).catch(() => ({}));
     const isGenericCrowdvoltCard = (u) => /\/opengraph-image\b/i.test(u);
-    let updated = 0;
-    const queue = [...candidates];
+    let updated = 0, stillMissing = 0;
+    const queue = [...withUrls];
     await Promise.all(Array.from({ length: 4 }, async () => {
       while (queue.length) {
         const s = queue.shift();
@@ -777,13 +780,18 @@ function App() {
         const cvImage = cv.imageUrl && !isGenericCrowdvoltCard(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
         const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
         const chosen = dcImage || cvImage || null;
-        if (chosen) {
+        if (chosen && chosen !== s.artist_image_url) {
           await sb.from('shows').update({ artist_image_url: chosen }).eq('id', s.id);
           updated++;
+        } else if (!chosen && !s.artist_image_url) {
+          stillMissing++;
         }
       }
     }));
-    showToast(`Refreshed ${updated} of ${candidates.length} image${candidates.length === 1 ? '' : 's'}`);
+    const parts = [`${updated} updated`];
+    if (stillMissing) parts.push(`${stillMissing} still missing`);
+    if (noUrls.length) parts.push(`${noUrls.length} with no URL`);
+    showToast(parts.join(' · '));
   };
 
   if (loading) return h('div', { className: 'loading' }, 'loading');
