@@ -528,6 +528,7 @@ function App() {
       setTickets(t.data || []);
       setReactions(r.data || []);
       setVisits(v.data || []);
+      console.log('[initial fetch] tickets:', t.data?.length || 0, t.data);
       setLoading(false);
       // Fix Burning Man date to September 2026
       const bm = (s.data || []).find(show => show.artist?.toLowerCase().includes('burning man'));
