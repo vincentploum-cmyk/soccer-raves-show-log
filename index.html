@@ -1100,9 +1100,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
   // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
-  // CrowdVolt's og:image is only accepted when it's an event-specific portrait
-  // (img.crowdvolt.com/<uuid>); the generic site share card (crowdvolt.com/opengraph-image.png)
-  // is treated as "no image."
+  // CrowdVolt's og:image is accepted unless it's the generic site share card
+  // (any URL whose path matches /opengraph-image…). Restricting to a single CDN
+  // host (img.crowdvolt.com) silently dropped legit images when CrowdVolt
+  // rotated their CDN.
   // Both fetches are awaited together so the decision is deterministic.
   useEffect(() => {
     if (!show.crowdvolt_url && !show.dice_url) return;
@@ -1120,7 +1121,8 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
       // into a 1300x630 social-card banner; the bare URL serves the full poster, which
       // crops cleanly from the top in a square thumbnail. Apply the same to CrowdVolt
       // for consistency.
-      const cvImage = cv.imageUrl && /^https?:\/\/img\.crowdvolt\.com\//i.test(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
+      const isGenericCrowdvoltCard = (u) => /\/opengraph-image\b/i.test(u);
+      const cvImage = cv.imageUrl && !isGenericCrowdvoltCard(cv.imageUrl) ? cv.imageUrl.split('?')[0] : null;
       const dcImage = dc.imageUrl ? dc.imageUrl.split('?')[0] : null;
       const chosen = dcImage || cvImage || null;
       if (chosen && show.artist_image_url !== chosen) {
