@@ -521,7 +521,7 @@ function App() {
         sb.from('shows').select('*').order('date', { ascending: true }),
         sb.from('tickets').select('*'),
         sb.from('reactions').select('*'),
-        sb.from('visits').select('*').order('opened_at', { ascending: false }).limit(200),
+        sb.from('visits').select('*').order('opened_at', { ascending: false }).limit(200).then(res => res.error ? { data: [] } : res),
       ]);
       setFriends(f.data || []);
       setShows(s.data || []);
@@ -593,8 +593,8 @@ function App() {
     const last = parseInt(localStorage.getItem(key) || '0', 10);
     if (Date.now() - last < 10 * 60 * 1000) return;
     localStorage.setItem(key, String(Date.now()));
-    sb.from('visits').insert({ friend_id: currentUser.id }).select().single().then(({ data }) => {
-      if (data) setVisits(cur => cur.some(v => v.id === data.id) ? cur : [data, ...cur]);
+    sb.from('visits').insert({ friend_id: currentUser.id }).select().single().then(({ data, error }) => {
+      if (data && !error) setVisits(cur => cur.some(v => v.id === data.id) ? cur : [data, ...cur]);
     });
   }, [currentUser?.id]);
 
