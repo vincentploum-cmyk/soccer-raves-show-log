@@ -74,10 +74,12 @@
   html.night input, html.night select, html.night textarea { background: rgba(255,255,255,0.07); color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
   html.night input:focus, html.night select:focus { background: rgba(255,255,255,0.1); box-shadow: 0 0 0 2px rgba(255,255,255,0.14); }
   html.night option { background: #1a1a24; color: var(--text); }
-  /* Modals stay white in dark mode — keep inputs/selects readable on that white background */
+  /* Modals stay white in dark mode — keep inputs/selects/buttons readable on that white background */
   html.night .modal input, html.night .modal select, html.night .modal textarea { background: rgba(0,0,0,0.05); color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; }
   html.night .modal input:focus, html.night .modal select:focus { background: rgba(0,0,0,0.08); box-shadow: 0 0 0 2px rgba(0,0,0,0.14); }
   html.night .modal option { background: #fff; color: #0F0F0F; }
+  html.night .modal .ghost-btn { background: rgba(0,0,0,0.05); color: #333; border-color: rgba(0,0,0,0.18); }
+  html.night .modal .ghost-btn:hover { background: rgba(0,0,0,0.1); color: #0F0F0F; }
   html.night .genre-chip { background: rgba(255,255,255,0.1); color: var(--text-2); }
   html.night .section-divider { color: var(--text-3); }
   html.night .section-divider::before, html.night .section-divider::after { background: var(--border); }
