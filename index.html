@@ -173,7 +173,16 @@
   .venue-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #666; text-decoration: none; border-bottom: 1px solid rgba(0,0,0,0.15); padding-bottom: 1px; transition: all 0.15s; }
   .venue-link:hover { color: #0F0F0F; border-bottom-color: #0F0F0F; }
 
-  .going-stat { text-align: right; flex-shrink: 0; background: #0F0F0F; padding: 6px 10px; border-radius: 10px; }
+  .going-stat { text-align: right; flex-shrink: 0; background: #0F0F0F; padding: 6px 10px; border-radius: 10px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; user-select: none; }
+  .going-stat:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+  .going-stat:active { transform: translateY(0); }
+  .going-stat.disabled { cursor: default; }
+  .going-stat.disabled:hover { transform: none; box-shadow: none; }
+  .going-list { display: flex; flex-direction: column; gap: 2px; margin: 14px 0 4px; }
+  .going-list-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.03); }
+  html.night .going-list-row { background: rgba(255,255,255,0.05); }
+  .going-list-name { font-weight: 600; font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .going-list-tix { font-size: 11px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; color: #999; text-transform: uppercase; }
   .going-stat-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.12em; }
   .going-stat-value { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 28px; color: #B5FF5A; -webkit-text-fill-color: #B5FF5A; background: none; line-height: 1; margin: 2px 0; }
 
@@ -209,6 +218,24 @@
   .react-btn.down.active { background: rgba(255,61,90,0.12); color: var(--red); }
   .react-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
   .reactions-summary { margin-left: auto; font-size: 11px; color: #999; font-family: 'JetBrains Mono', monospace; }
+
+  /* Media button + grid */
+  .media-btn { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.06); border: none; padding: 5px 10px; border-radius: 999px; font-size: 12px; color: #555; transition: all 0.15s; cursor: pointer; }
+  .media-btn:hover { background: rgba(0,0,0,0.10); color: #0F0F0F; }
+  .media-btn.has-media { background: rgba(157,92,255,0.12); color: var(--purple); }
+  .media-btn.has-media:hover { background: rgba(157,92,255,0.18); }
+  html.night .media-btn { background: rgba(255,255,255,0.08); color: #ccc; }
+  html.night .media-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  html.night .media-btn.has-media { background: rgba(157,92,255,0.22); color: #d6b8ff; }
+  .media-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0; }
+  .media-tile { position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.04); cursor: pointer; }
+  .media-tile img, .media-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media-tile .video-badge { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; }
+  .media-empty { text-align: center; padding: 28px 8px; color: #999; font-size: 13px; }
+  .media-uploader { font-size: 10px; color: #999; font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-align: center; }
+  .media-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+  .media-lightbox img, .media-lightbox video { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  .media-lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.15); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; }
 
   /* Avatar group */
   .avatars { display: inline-flex; }
@@ -483,6 +510,7 @@ function App() {
   const [shows, setShows] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [reactions, setReactions] = useState([]);
+  const [media, setMedia] = useState([]);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(() => {
@@ -496,6 +524,7 @@ function App() {
   const [editModal, setEditModal] = useState(null); // { showId, friendId }
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
+  const [mediaShowId, setMediaShowId] = useState(null);
   const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', venue: 'all', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
@@ -535,17 +564,19 @@ function App() {
         return all;
       };
 
-      const [f, s, t, r, v] = await Promise.all([
+      const [f, s, t, r, m, v] = await Promise.all([
         sb.from('friends').select('*').order('name'),
         sb.from('shows').select('*').order('date', { ascending: true }),
         fetchAllTickets(),
         sb.from('reactions').select('*'),
+        sb.from('show_media').select('*').order('created_at', { ascending: false }).then(res => res.error ? { data: [] } : res),
         sb.from('visits').select('*').order('opened_at', { ascending: false }).limit(200).then(res => res.error ? { data: [] } : res),
       ]);
       setFriends(f.data || []);
       setShows(s.data || []);
       setTickets(t || []);
       setReactions(r.data || []);
+      setMedia(m.data || []);
       setVisits(v.data || []);
       setLoading(false);
       // Fix Burning Man date to September 2026
@@ -564,6 +595,9 @@ function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (p) => {
         setReactions((cur) => applyChange(cur, p));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'show_media' }, (p) => {
+        setMedia((cur) => applyChange(cur, p));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, (p) => {
         setFriends((cur) => applyChange(cur, p));
@@ -633,13 +667,14 @@ function App() {
     return shows.map((s) => {
       const showTix = tickets.filter((t) => t.show_id === s.id);
       const showReacts = reactions.filter((r) => r.show_id === s.id);
+      const showMedia = media.filter((m) => m.show_id === s.id);
       const totalTix = showTix.reduce((a, b) => a + b.count, 0);
       const goingCount = showTix.filter((t) => t.count > 0).length;
       const upvotes = showReacts.filter((r) => r.vote === 1);
       const downvotes = showReacts.filter((r) => r.vote === -1);
-      return { ...s, tickets: showTix, reactions: showReacts, totalTix, goingCount, upvotes, downvotes, past: isPast(s.date) };
+      return { ...s, tickets: showTix, reactions: showReacts, media: showMedia, totalTix, goingCount, upvotes, downvotes, past: isPast(s.date) };
     });
-  }, [shows, tickets, reactions]);
+  }, [shows, tickets, reactions, media]);
 
   const filtered = useMemo(() => {
     return showsEnriched.filter((s) => {
@@ -886,6 +921,7 @@ function App() {
       onDeleteShow: deleteShow,
       onEditShow: (showId) => setEditShowModal(showId),
       onAddTickets: (showId) => setAddTicketsModal({ showId, friendId: currentUser?.id }),
+      onOpenMedia: (showId) => setMediaShowId(showId),
     }),
     tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched, visits }),
     tab === 'friend' && h(FriendView, {
@@ -961,6 +997,13 @@ function App() {
       friend: profileTarget || null,
       onClose: () => setProfileTarget(null),
       onSave: saveFriendProfile,
+    }),
+    mediaShowId !== null && h(MediaModal, {
+      show: showsEnriched.find((s) => s.id === mediaShowId),
+      friends,
+      currentUser,
+      onClose: () => setMediaShowId(null),
+      showToast,
     }),
     showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
       friends,
@@ -1096,7 +1139,7 @@ function VisitLog({ visits, friends }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -1139,7 +1182,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -1147,7 +1190,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets }) {
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
   const going = show.tickets.filter((t) => t.count > 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
@@ -1157,6 +1200,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [ticketPrice, setTicketPrice] = useState(null);
   const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
+  const [goingListOpen, setGoingListOpen] = useState(false);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
   // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
@@ -1232,7 +1276,11 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
             show.note && h('p', { style: { fontSize: 12, color: '#999', marginTop: 4, fontStyle: 'italic' } }, show.note),
           ),
           h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 } },
-            h('div', { className: 'going-stat' },
+            h('div', {
+              className: 'going-stat' + (going.length === 0 ? ' disabled' : ''),
+              onClick: going.length > 0 ? () => setGoingListOpen(true) : null,
+              title: going.length > 0 ? 'See who\'s going' : null,
+            },
               h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
               h('div', { className: 'going-stat-value' }, going.length),
               h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
@@ -1301,6 +1349,14 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           })
         )
       ),
+      h('button', {
+        className: 'media-btn' + ((show.media?.length || 0) > 0 ? ' has-media' : ''),
+        onClick: () => onOpenMedia && onOpenMedia(show.id),
+        title: 'Photos & videos',
+      },
+        '📷 Media',
+        (show.media?.length || 0) > 0 && h('span', { className: 'react-count' }, show.media.length),
+      ),
       pctUp !== null && h('div', { className: 'reactions-summary' },
         pctUp >= 75 ? '🔥 loved · ' + pctUp + '%' : pctUp >= 50 ? '👌 solid · ' + pctUp + '%' : '💀 skip · ' + pctUp + '%'
       )
@@ -1342,6 +1398,42 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           onClick: () => onDeleteShow(show.id),
           style: { fontSize: 10, color: '#999', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }
         }, 'delete')
+      )
+    ),
+    goingListOpen && h(GoingListModal, {
+      show, friends, going,
+      onClose: () => setGoingListOpen(false),
+    })
+  );
+}
+
+// ===== Going list modal =====
+function GoingListModal({ show, friends, going, onClose }) {
+  const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
+  const rows = going
+    .map((t) => ({ ticket: t, friend: friendsById[t.friend_id] }))
+    .filter((r) => r.friend)
+    .sort((a, b) => a.friend.name.localeCompare(b.friend.name));
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal' },
+      h('p', { className: 'modal-sub' }, formatDate(show.date) + (show.venue ? ' · ' + show.venue : '')),
+      h('h2', { className: 'modal-title', style: { marginBottom: 4 } }, show.past ? 'Who went' : "Who's going"),
+      h('p', { style: { fontSize: 12, color: '#999', marginBottom: 6 } },
+        `${rows.length} ${rows.length === 1 ? 'person' : 'people'} · ${show.totalTix} ticket${show.totalTix === 1 ? '' : 's'}`
+      ),
+      h('div', { className: 'going-list' },
+        rows.map(({ ticket, friend }) => h('div', { key: ticket.id, className: 'going-list-row' },
+          h(Avatar, { friend, size: 36 }),
+          h('div', { className: 'going-list-name' },
+            friend.name,
+            friend.fav_artist && h('div', { style: { fontSize: 11, color: '#999', fontWeight: 400, marginTop: 1 } }, '🎧 ' + friend.fav_artist),
+          ),
+          h('span', { className: 'going-list-tix' }, ticket.count > 1 ? `×${ticket.count}` : '1 tix')
+        ))
+      ),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Close')
       )
     )
   );
@@ -2007,6 +2099,125 @@ function ProfileModal({ friend, onClose, onSave }) {
         h('button', { className: 'primary-btn', style: { flex: 1 }, onClick: submit, disabled: saving || !name.trim() },
           saving ? 'Saving…' : (friend ? 'Save Changes' : 'Create Profile')
         )
+      )
+    )
+  );
+}
+
+// ===== Media modal (past shows) =====
+function MediaModal({ show, friends, currentUser, onClose, showToast }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // media row
+  const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
+  const items = (show?.media || []).slice().sort((a, b) =>
+    (b.created_at || '').localeCompare(a.created_at || '')
+  );
+
+  const onPick = () => {
+    if (!currentUser) {
+      showToast && showToast('Pick your name first to upload');
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !show) return;
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) {
+      showToast && showToast('Only images or videos');
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = (file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase();
+      const path = `${show.id}/${Date.now()}.${ext}`;
+      const { data: up, error: upErr } = await sb.storage
+        .from('show-media')
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr || !up) {
+        showToast && showToast("Upload failed — try again");
+        return;
+      }
+      const { data: pub } = sb.storage.from('show-media').getPublicUrl(up.path);
+      const { error: insErr } = await sb.from('show_media').insert({
+        show_id: show.id,
+        friend_id: currentUser.id,
+        url: pub.publicUrl,
+        kind: isVideo ? 'video' : 'photo',
+      });
+      if (insErr) {
+        showToast && showToast(
+          '⚠️ DB migration not run!\n\nIn Supabase SQL editor run:\n\n' +
+          'CREATE TABLE show_media (\n' +
+          '  id BIGSERIAL PRIMARY KEY,\n' +
+          '  show_id BIGINT REFERENCES shows(id) ON DELETE CASCADE,\n' +
+          '  friend_id BIGINT REFERENCES friends(id) ON DELETE SET NULL,\n' +
+          '  url TEXT NOT NULL,\n' +
+          '  kind TEXT NOT NULL,\n' +
+          "  created_at TIMESTAMPTZ DEFAULT now()\n);"
+        );
+      }
+    } catch (err) {
+      showToast && showToast(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (!show) return null;
+
+  return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
+    h('div', { className: 'modal' },
+      h('p', { className: 'modal-sub' }, formatDate(show.date) + (show.venue ? ' · ' + show.venue : '')),
+      h('h2', { className: 'modal-title', style: { marginBottom: 4 } }, show.artist),
+      h('p', { style: { fontSize: 12, color: '#999', marginBottom: 14 } }, items.length === 0 ? 'No media yet — be the first.' : `${items.length} photo${items.length === 1 ? '' : 's'} & video${items.length === 1 ? '' : 's'}`),
+
+      items.length > 0 && h('div', { className: 'media-grid' },
+        items.map((m) => h('div', {
+          key: m.id, className: 'media-tile',
+          onClick: () => setLightbox(m),
+        },
+          m.kind === 'video'
+            ? [
+                h('video', { key: 'v', src: m.url, muted: true, playsInline: true, preload: 'metadata' }),
+                h('span', { key: 'b', className: 'video-badge' }, '▶')
+              ]
+            : h('img', { src: m.url, alt: '', loading: 'lazy' })
+        ))
+      ),
+
+      h('input', {
+        ref: fileInputRef, type: 'file', accept: 'image/*,video/*',
+        style: { display: 'none' },
+        onChange: onFile,
+      }),
+
+      h('div', { style: { display: 'flex', gap: 8, marginTop: 8 } },
+        h('button', { className: 'ghost-btn', onClick: onClose }, 'Close'),
+        h('button', {
+          className: 'primary-btn',
+          style: { flex: 1 },
+          onClick: onPick,
+          disabled: uploading || !currentUser,
+        }, uploading ? 'Uploading…' : (currentUser ? '+ Upload photo or video' : 'Pick your name to upload'))
+      ),
+
+      lightbox && h('div', {
+        className: 'media-lightbox',
+        onClick: (e) => { if (e.target === e.currentTarget) setLightbox(null); },
+      },
+        h('button', { className: 'media-lightbox-close', onClick: () => setLightbox(null) }, '×'),
+        lightbox.kind === 'video'
+          ? h('video', { src: lightbox.url, controls: true, autoPlay: true, playsInline: true })
+          : h('img', { src: lightbox.url, alt: '' }),
+        h('div', {
+          style: { position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em', opacity: 0.7 },
+        }, friendsById[lightbox.friend_id]?.name ? `by ${friendsById[lightbox.friend_id].name}` : '')
       )
     )
   );
