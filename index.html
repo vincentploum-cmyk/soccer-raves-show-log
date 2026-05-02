@@ -1814,7 +1814,11 @@ function CropEditor({ src, onCropChange }) {
     };
     const onMouseMove = (e) => move(e.clientX, e.clientY);
     const onMouseUp = () => { dragRef.current = null; };
-    const onTouchMove = (e) => { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); };
+    const onTouchMove = (e) => {
+      if (!dragRef.current) return;
+      e.preventDefault();
+      move(e.touches[0].clientX, e.touches[0].clientY);
+    };
     const onTouchEnd = () => { dragRef.current = null; };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
@@ -1907,7 +1911,7 @@ function resizeToDataUrl(file, maxPx = 240) {
 }
 
 // ===== Profile modal =====
-const GENRES = ['Techno', 'House', 'Afro House', 'Afrobeats', 'Melodic Techno', 'Deep House', 'Tech House', 'Progressive House', 'Hip-Hop', 'Reggaeton', 'Drum & Bass', 'Jungle', 'Disco', 'UK Garage', 'Minimal'];
+const GENRES = ['Techno', 'House', 'Afro House', 'Afrobeats', 'Melodic Techno', 'Deep House', 'Tech House', 'Progressive House', 'Trance', 'Hip-Hop', 'Reggaeton', 'Drum & Bass', 'Jungle', 'Disco', 'UK Garage', 'Minimal', 'Other'];
 
 function ProfileModal({ friend, onClose, onSave }) {
   const [name, setName] = useState(friend?.name || '');
