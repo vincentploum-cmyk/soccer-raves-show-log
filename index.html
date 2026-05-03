@@ -2163,7 +2163,16 @@ function MediaModal({ show, friends, currentUser, onClose, showToast }) {
         .from('show-media')
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr || !up) {
-        showToast && showToast("Upload failed — try again");
+        const msg = upErr?.message || upErr?.error || 'unknown';
+        if (/bucket.*not.*found|not.*found.*bucket/i.test(msg)) {
+          showToast && showToast('⚠️ Bucket missing.\n\nIn Supabase Storage create a public bucket named "show-media".');
+        } else if (/policy|permission|unauthor|403|row-level/i.test(msg)) {
+          showToast && showToast('⚠️ Storage policy blocks uploads.\n\nIn Supabase Storage → show-media → Policies, add INSERT (and SELECT) policies for the anon role with USING (true).');
+        } else if (/payload too large|413|maximum allowed size/i.test(msg)) {
+          showToast && showToast('File too large for the bucket. Try a smaller one, or raise the bucket file-size limit.');
+        } else {
+          showToast && showToast('Upload failed: ' + msg);
+        }
         return;
       }
       const { data: pub } = sb.storage.from('show-media').getPublicUrl(up.path);
