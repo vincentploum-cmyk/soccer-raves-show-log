@@ -525,6 +525,7 @@ function App() {
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
   const [mediaShowId, setMediaShowId] = useState(null);
+  const [goingListShowId, setGoingListShowId] = useState(null);
   const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', venue: 'all', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
@@ -749,7 +750,7 @@ function App() {
     return true;
   };
 
-  const setTicketCount = async (showId, friendId, count, actorId) => {
+  const setTicketCount = async (showId, friendId, count, actorId, isPrivate) => {
     if (count === 0) {
       // Delete by composite key so a stale local cache (missing the row) still
       // clears any server-side row that exists.
@@ -760,8 +761,14 @@ function App() {
       return;
     }
     const payload = { show_id: showId, friend_id: friendId, count };
+    if (isPrivate !== undefined) payload.private = !!isPrivate;
     const { data, error } = await sb.from('tickets').upsert(payload, { onConflict: 'show_id,friend_id' }).select();
     if (error) {
+      // Likely cause: the `private` column hasn't been added yet. Retry without it.
+      if (isPrivate !== undefined && /private/i.test(error.message || '')) {
+        showToast('⚠️ Run migration: ALTER TABLE tickets ADD COLUMN private BOOLEAN DEFAULT false;');
+        return;
+      }
       showToast('Error: ' + (error.message || error.code || JSON.stringify(error)));
       return;
     }
@@ -922,6 +929,7 @@ function App() {
       onEditShow: (showId) => setEditShowModal(showId),
       onAddTickets: (showId) => setAddTicketsModal({ showId, friendId: currentUser?.id }),
       onOpenMedia: (showId) => setMediaShowId(showId),
+      onOpenGoingList: (showId) => setGoingListShowId(showId),
     }),
     tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched, visits }),
     tab === 'friend' && h(FriendView, {
@@ -931,6 +939,7 @@ function App() {
       onAddTickets: (friendId) => setAddTicketsModal({ friendId }),
       onEditProfile: (friend) => setProfileTarget(friend),
       onRemoveFriend: removeFriend,
+      onOpenMedia: (showId) => setMediaShowId(showId),
     }),
     // Modals
     addModalOpen && h(AddShowModal, {
@@ -970,8 +979,8 @@ function App() {
       friends, currentUser,
       friendId: editModal.friendId,
       onClose: () => setEditModal(null),
-      onSave: async (count, actorId, friendId) => {
-        await setTicketCount(editModal.showId, friendId ?? editModal.friendId, count, actorId);
+      onSave: async (count, actorId, friendId, isPrivate) => {
+        await setTicketCount(editModal.showId, friendId ?? editModal.friendId, count, actorId, isPrivate);
         setEditModal(null);
       },
     }),
@@ -1005,6 +1014,17 @@ function App() {
       onClose: () => setMediaShowId(null),
       showToast,
     }),
+    goingListShowId !== null && (() => {
+      const s = showsEnriched.find((x) => x.id === goingListShowId);
+      if (!s) return null;
+      const going = s.tickets.filter((t) =>
+        t.count > 0 && (!t.private || (currentUser && t.friend_id === currentUser.id))
+      );
+      return h(GoingListModal, {
+        show: s, friends, going,
+        onClose: () => setGoingListShowId(null),
+      });
+    })(),
     showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
       friends,
       onPick: (id) => {
@@ -1139,7 +1159,7 @@ function VisitLog({ visits, friends }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -1182,7 +1202,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -1190,8 +1210,12 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
-  const going = show.tickets.filter((t) => t.count > 0);
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
+  // Hide tickets marked private from anyone except their owner.
+  const isMyTicket = (t) => currentUser && t.friend_id === currentUser.id;
+  const visibleTickets = show.tickets.filter((t) => !t.private || isMyTicket(t));
+  const going = visibleTickets.filter((t) => t.count > 0);
+  const visibleTotalTix = visibleTickets.reduce((a, t) => a + (t.count || 0), 0);
   const popular = going.length >= 8;
   const friendsById = Object.fromEntries(friends.map((f) => [f.id, f]));
   const goingFriendIds = new Set(going.map((t) => t.friend_id));
@@ -1200,7 +1224,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [ticketPrice, setTicketPrice] = useState(null);
   const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
-  const [goingListOpen, setGoingListOpen] = useState(false);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
   // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
@@ -1278,12 +1301,12 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 } },
             h('div', {
               className: 'going-stat' + (going.length === 0 ? ' disabled' : ''),
-              onClick: going.length > 0 ? () => setGoingListOpen(true) : null,
+              onClick: going.length > 0 ? () => onOpenGoingList && onOpenGoingList(show.id) : null,
               title: going.length > 0 ? 'See who\'s going' : null,
             },
               h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
               h('div', { className: 'going-stat-value' }, going.length),
-              h('div', { className: 'going-stat-label' }, show.totalTix + ' tix'),
+              h('div', { className: 'going-stat-label' }, visibleTotalTix + ' tix'),
             ),
           )
         )
@@ -1296,14 +1319,17 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         if (!friend) return null;
         const isMe = currentUser && t.friend_id === currentUser.id;
         const cls = show.past ? 'chip-past' : (t.count >= 2 ? 'chip-vip' : (isMe ? 'chip-mine' : 'chip-1'));
+        const isHidden = isMe && t.private;
         return h('span', {
           key: t.id,
           className: 'chip ' + cls,
           onClick: show.past || !currentUser ? null : () => onEditChip(show.id, friend.id),
-          title: show.past ? null : `Click to edit ${friend.name}'s tickets`,
+          title: show.past ? null : (isHidden ? "Only you see this — click to edit" : `Click to edit ${friend.name}'s tickets`),
         },
           friend.avatar_url && h('img', { src: friend.avatar_url, style: { width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 } }),
-          friend.name, isMe && !show.past ? ' ✓' : null, h('span', { className: 'chip-count' }, t.count));
+          friend.name,
+          isHidden ? ' 🔒' : (isMe && !show.past ? ' ✓' : null),
+          h('span', { className: 'chip-count' }, t.count));
       }),
     ),
     // Reactions (past shows only)
@@ -1400,10 +1426,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         }, 'delete')
       )
     ),
-    goingListOpen && h(GoingListModal, {
-      show, friends, going,
-      onClose: () => setGoingListOpen(false),
-    })
   );
 }
 
@@ -1414,13 +1436,14 @@ function GoingListModal({ show, friends, going, onClose }) {
     .map((t) => ({ ticket: t, friend: friendsById[t.friend_id] }))
     .filter((r) => r.friend)
     .sort((a, b) => a.friend.name.localeCompare(b.friend.name));
+  const visibleTotalTix = going.reduce((a, t) => a + (t.count || 0), 0);
 
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
     h('div', { className: 'modal' },
       h('p', { className: 'modal-sub' }, formatDate(show.date) + (show.venue ? ' · ' + show.venue : '')),
       h('h2', { className: 'modal-title', style: { marginBottom: 4 } }, show.past ? 'Who went' : "Who's going"),
       h('p', { style: { fontSize: 12, color: '#999', marginBottom: 6 } },
-        `${rows.length} ${rows.length === 1 ? 'person' : 'people'} · ${show.totalTix} ticket${show.totalTix === 1 ? '' : 's'}`
+        `${rows.length} ${rows.length === 1 ? 'person' : 'people'} · ${visibleTotalTix} ticket${visibleTotalTix === 1 ? '' : 's'}`
       ),
       h('div', { className: 'going-list' },
         rows.map(({ ticket, friend }) => h('div', { key: ticket.id, className: 'going-list-row' },
@@ -2230,6 +2253,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
   const existing = friendId ? show.tickets.find((t) => t.friend_id === friendId) : null;
   const [count, setCount] = useState(existing?.count || 1);
   const [actorId, setActorId] = useState(currentUser?.id || friendId);
+  const [isPrivate, setIsPrivate] = useState(!!existing?.private);
   const [saving, setSaving] = useState(false);
   const [pickedFriend, setPickedFriend] = useState(defaultPickedId);
 
@@ -2239,9 +2263,13 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
   const activeFriend = friends.find((f) => f.id === activeFriendId);
   const friend = activeFriend;
 
+  // Privacy is the active friend's own choice — only show the toggle when the
+  // viewer is editing their own ticket.
+  const canTogglePrivacy = currentUser && activeFriendId === currentUser.id;
+
   const submit = async () => {
     setSaving(true);
-    await onSave(count, actorId, activeFriendId);
+    await onSave(count, actorId, activeFriendId, canTogglePrivacy ? isPrivate : undefined);
   };
 
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) onClose(); } },
@@ -2271,6 +2299,20 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
         h('button', { className: 'stepper-btn', onClick: () => setCount(count + 1) }, '+')
       ),
       count === 0 && h('p', { style: { fontSize: 11, color: 'var(--red)', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } }, (activeFriend?.name) + ' will be removed from this show'),
+      canTogglePrivacy && count > 0 && h('label', {
+        style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, marginBottom: 14, cursor: 'pointer', fontSize: 13 },
+      },
+        h('input', {
+          type: 'checkbox',
+          checked: isPrivate,
+          onChange: (e) => setIsPrivate(e.target.checked),
+          style: { width: 16, height: 16, cursor: 'pointer' },
+        }),
+        h('span', { style: { flex: 1 } },
+          h('div', { style: { fontWeight: 600 } }, '🔒 Hide from others'),
+          h('div', { style: { fontSize: 11, color: '#999', marginTop: 2 } }, "Only you'll see you have tickets for this show")
+        )
+      ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
         h('button', { className: 'primary-btn', onClick: submit, disabled: saving }, saving ? 'Saving...' : 'Save')
@@ -2280,25 +2322,27 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
 }
 
 // ===== Per-friend view =====
-function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, onAddTickets, onEditProfile, onRemoveFriend }) {
+function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, onAddTickets, onEditProfile, onRemoveFriend, onOpenMedia }) {
   const friend = friends.find((f) => f.id === selectedId);
   if (!friend) return h('div', { className: 'empty-state' }, h('h3', null, 'Pick a friend'), h('p', null, 'Or create a profile to get started'));
 
-  const myShows = shows.filter((s) => s.tickets.some((t) => t.friend_id === friend.id && t.count > 0));
+  // Respect ticket privacy — only the owner sees their own private tickets.
+  const isOwnView = currentUser?.id === friend.id;
+  const visibleTicketFor = (s) => s.tickets.find((t) =>
+    t.friend_id === friend.id && t.count > 0 && (!t.private || isOwnView)
+  );
+  const myShows = shows.filter((s) => !!visibleTicketFor(s));
   const upcoming = myShows.filter((s) => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const past = myShows.filter((s) => s.past).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  const totalTix = myShows.reduce((a, s) => {
-    const t = s.tickets.find((t) => t.friend_id === friend.id);
-    return a + (t?.count || 0);
-  }, 0);
+  const totalTix = myShows.reduce((a, s) => a + (visibleTicketFor(s)?.count || 0), 0);
 
   const myReacts = shows.flatMap((s) => s.reactions.filter((r) => r.friend_id === friend.id));
   const ups = myReacts.filter((r) => r.vote === 1).length;
   const downs = myReacts.filter((r) => r.vote === -1).length;
   const upPct = (ups + downs) > 0 ? Math.round(100 * ups / (ups + downs)) : null;
 
-  const isOwnProfile = currentUser?.id === friend.id;
+  const isOwnProfile = isOwnView;
   const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
 
   return h('div', null,
@@ -2345,23 +2389,25 @@ function FriendView({ friends, shows, currentUser, selectedId, setSelectedId, on
     ),
     upcoming.length > 0 && h('div', { className: 'section-divider' }, 'Upcoming'),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
-      upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
+      upcoming.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends, currentUser, onOpenMedia })),
     ),
     past.length > 0 && h('div', { className: 'section-divider' }, 'Past'),
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
-      past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends })),
+      past.map((s) => h(FriendRow, { key: s.id, show: s, friendId: friend.id, friends, currentUser, onOpenMedia })),
     ),
     myShows.length === 0 && h('div', { className: 'empty-state' }, h('h3', null, friend.name + ' has no shows yet'))
   );
 }
-function FriendRow({ show, friendId, friends }) {
+function FriendRow({ show, friendId, friends, currentUser, onOpenMedia }) {
   const t = show.tickets.find((t) => t.friend_id === friendId);
   const myReact = show.reactions.find((r) => r.friend_id === friendId);
   const [expanded, setExpanded] = useState(false);
   const [ticketPrice, setTicketPrice] = useState(null);
   const [dicePrice, setDicePrice] = useState(null);
   const friendsById = Object.fromEntries((friends || []).map((f) => [f.id, f]));
-  const going = show.tickets.filter((t) => t.count > 0);
+  const going = show.tickets.filter((t) =>
+    t.count > 0 && (!t.private || (currentUser && t.friend_id === currentUser.id))
+  );
 
   useEffect(() => {
     if (!expanded) return;
@@ -2413,6 +2459,14 @@ function FriendRow({ show, friendId, friends }) {
       h('div', { style: { fontSize: 12, color: '#666', marginBottom: 8 } },
         h('strong', null, 'Going: '),
         going.map(t => { const f = friendsById[t.friend_id]; return f ? f.name + (t.count > 1 ? ` ×${t.count}` : '') : null; }).filter(Boolean).join(', ') || 'No one yet'
+      ),
+      show.past && h('button', {
+        className: 'media-btn' + ((show.media?.length || 0) > 0 ? ' has-media' : ''),
+        style: { marginBottom: 8 },
+        onClick: () => onOpenMedia && onOpenMedia(show.id),
+      },
+        '📷 Media',
+        (show.media?.length || 0) > 0 && h('span', { className: 'react-count' }, show.media.length),
       ),
       !show.past && (show.crowdvolt_url || show.dice_url) && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } },
         show.crowdvolt_url && h('a', {
