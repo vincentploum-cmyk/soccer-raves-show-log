@@ -525,6 +525,7 @@ function App() {
   const [addTicketsModal, setAddTicketsModal] = useState(null); // friendId
   const [editShowModal, setEditShowModal] = useState(null); // showId
   const [mediaShowId, setMediaShowId] = useState(null);
+  const [goingListShowId, setGoingListShowId] = useState(null);
   const [filter, setFilter] = useState({ year: 'all', status: 'upcoming', venue: 'all', search: '' });
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
@@ -928,6 +929,7 @@ function App() {
       onEditShow: (showId) => setEditShowModal(showId),
       onAddTickets: (showId) => setAddTicketsModal({ showId, friendId: currentUser?.id }),
       onOpenMedia: (showId) => setMediaShowId(showId),
+      onOpenGoingList: (showId) => setGoingListShowId(showId),
     }),
     tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched, visits }),
     tab === 'friend' && h(FriendView, {
@@ -1011,6 +1013,17 @@ function App() {
       onClose: () => setMediaShowId(null),
       showToast,
     }),
+    goingListShowId !== null && (() => {
+      const s = showsEnriched.find((x) => x.id === goingListShowId);
+      if (!s) return null;
+      const going = s.tickets.filter((t) =>
+        t.count > 0 && (!t.private || (currentUser && t.friend_id === currentUser.id))
+      );
+      return h(GoingListModal, {
+        show: s, friends, going,
+        onClose: () => setGoingListShowId(null),
+      });
+    })(),
     showWelcomeModal && !loading && friends.length > 0 && h(WelcomeModal, {
       friends,
       onPick: (id) => {
@@ -1145,7 +1158,7 @@ function VisitLog({ visits, friends }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
@@ -1188,7 +1201,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
     h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
       shows.map((s, idx) => h(React.Fragment, { key: s.id },
         idx === firstUpcomingIdx && firstUpcomingIdx > 0 && h('div', { className: 'section-divider' }, 'Upcoming shows'),
-        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia })
+        h(ShowCard, { show: s, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList })
       ))
     ),
     shows.length > 0 && h('div', { className: 'footnote' }, '💡 click a chip to edit tickets for that friend · anyone can add for anyone')
@@ -1196,7 +1209,7 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
 }
 
 // ===== Show card =====
-function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia }) {
+function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
   // Hide tickets marked private from anyone except their owner.
   const isMyTicket = (t) => currentUser && t.friend_id === currentUser.id;
   const visibleTickets = show.tickets.filter((t) => !t.private || isMyTicket(t));
@@ -1210,7 +1223,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   const [ticketPrice, setTicketPrice] = useState(null);
   const [crowdvoltLoaded, setCrowdvoltLoaded] = useState(false);
   const [dicePrice, setDicePrice] = useState(null);
-  const [goingListOpen, setGoingListOpen] = useState(false);
   const noTicketsOnCrowdvolt = show.crowdvolt_url && crowdvoltLoaded && !ticketPrice;
 
   // Fetch ticket prices and resolve artist image. Dice first, CrowdVolt fallback.
@@ -1288,7 +1300,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 } },
             h('div', {
               className: 'going-stat' + (going.length === 0 ? ' disabled' : ''),
-              onClick: going.length > 0 ? () => setGoingListOpen(true) : null,
+              onClick: going.length > 0 ? () => onOpenGoingList && onOpenGoingList(show.id) : null,
               title: going.length > 0 ? 'See who\'s going' : null,
             },
               h('div', { className: 'going-stat-label' }, show.past ? 'went' : 'going'),
@@ -1413,10 +1425,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         }, 'delete')
       )
     ),
-    goingListOpen && h(GoingListModal, {
-      show, friends, going,
-      onClose: () => setGoingListOpen(false),
-    })
   );
 }
 
