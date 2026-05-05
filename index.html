@@ -2193,7 +2193,9 @@ function MediaModal({ show, friends, currentUser, onClose, showToast }) {
           '  kind TEXT NOT NULL,\n' +
           "  created_at TIMESTAMPTZ DEFAULT now()\n);"
         );
+        return;
       }
+      showToast && showToast(isVideo ? 'Video uploaded!' : 'Photo uploaded!');
     } catch (err) {
       showToast && showToast(err.message || 'Upload failed');
     } finally {
