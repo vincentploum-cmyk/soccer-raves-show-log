@@ -231,11 +231,14 @@
   .media-tile { position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.04); cursor: pointer; }
   .media-tile img, .media-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .media-tile .video-badge { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; }
+  .media-tile-uploader { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 6px 5px; background: linear-gradient(transparent, rgba(0,0,0,0.6)); color: #fff; font-size: 10px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
   .media-empty { text-align: center; padding: 28px 8px; color: #999; font-size: 13px; }
   .media-uploader { font-size: 10px; color: #999; font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-align: center; }
   .media-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   .media-lightbox img, .media-lightbox video { max-width: 100%; max-height: 100%; border-radius: 8px; }
   .media-lightbox-close { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.15); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; }
+  .media-lightbox-delete { position: absolute; bottom: 16px; right: 16px; background: rgba(220,38,38,0.85); color: #fff; border: none; padding: 7px 16px; border-radius: 8px; font-size: 12px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; cursor: pointer; }
+  .media-lightbox-delete:hover { background: rgba(220,38,38,1); }
 
   /* Avatar group */
   .avatars { display: inline-flex; }
@@ -2136,6 +2139,20 @@ function MediaModal({ show, friends, currentUser, onClose, showToast }) {
   const items = (show?.media || []).slice().sort((a, b) =>
     (b.created_at || '').localeCompare(a.created_at || '')
   );
+  const isAdmin = ['Tim', 'Vincent'].some(n => currentUser?.name?.startsWith(n));
+
+  const deleteMedia = async (m) => {
+    if (!confirm('Remove this media?')) return;
+    const { error } = await sb.from('show_media').delete().eq('id', m.id);
+    if (error) { showToast && showToast('Remove failed: ' + error.message); return; }
+    // Best-effort storage cleanup — extract path from public URL
+    try {
+      const match = m.url.match(/\/object\/public\/show-media\/(.+)/);
+      if (match) await sb.storage.from('show-media').remove([decodeURIComponent(match[1])]);
+    } catch (_) {}
+    setLightbox(null);
+    showToast && showToast('Removed');
+  };
 
   const onPick = () => {
     if (!currentUser) {
@@ -2212,17 +2229,21 @@ function MediaModal({ show, friends, currentUser, onClose, showToast }) {
       h('p', { style: { fontSize: 12, color: '#999', marginBottom: 14 } }, items.length === 0 ? 'No media yet — be the first.' : `${items.length} photo${items.length === 1 ? '' : 's'} & video${items.length === 1 ? '' : 's'}`),
 
       items.length > 0 && h('div', { className: 'media-grid' },
-        items.map((m) => h('div', {
-          key: m.id, className: 'media-tile',
-          onClick: () => setLightbox(m),
-        },
-          m.kind === 'video'
-            ? [
-                h('video', { key: 'v', src: m.url, muted: true, playsInline: true, preload: 'metadata' }),
-                h('span', { key: 'b', className: 'video-badge' }, '▶')
-              ]
-            : h('img', { src: m.url, alt: '', loading: 'lazy' })
-        ))
+        items.map((m) => {
+          const uploader = friendsById[m.friend_id];
+          return h('div', {
+            key: m.id, className: 'media-tile',
+            onClick: () => setLightbox(m),
+          },
+            m.kind === 'video'
+              ? [
+                  h('video', { key: 'v', src: m.url, muted: true, playsInline: true, preload: 'metadata' }),
+                  h('span', { key: 'b', className: 'video-badge' }, '▶')
+                ]
+              : h('img', { src: m.url, alt: '', loading: 'lazy' }),
+            uploader && h('div', { className: 'media-tile-uploader' }, uploader.name)
+          );
+        })
       ),
 
       h('input', {
@@ -2251,7 +2272,9 @@ function MediaModal({ show, friends, currentUser, onClose, showToast }) {
           : h('img', { src: lightbox.url, alt: '' }),
         h('div', {
           style: { position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em', opacity: 0.7 },
-        }, friendsById[lightbox.friend_id]?.name ? `by ${friendsById[lightbox.friend_id].name}` : '')
+        }, friendsById[lightbox.friend_id]?.name ? `by ${friendsById[lightbox.friend_id].name}` : ''),
+        (currentUser?.id === lightbox.friend_id || isAdmin) &&
+          h('button', { className: 'media-lightbox-delete', onClick: () => deleteMedia(lightbox) }, 'Remove')
       )
     )
   );
