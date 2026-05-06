@@ -260,6 +260,48 @@
     line-height: 1.65;
     text-shadow: 0 4px 18px rgba(0,0,0,0.35);
   }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+  .hero-button {
+    appearance: none;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  }
+  .hero-button:hover { transform: translateY(-1px); }
+  .hero-button-primary {
+    background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%);
+    color: #071008;
+    box-shadow: 0 18px 40px rgba(181,255,90,0.24);
+  }
+  .hero-button-secondary {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.14);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+  }
+  .hero-button-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.68;
+  }
   .hero-cta-row {
     display: flex;
     flex-wrap: wrap;
@@ -286,6 +328,43 @@
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.08em;
+  }
+  .hero-proof-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 22px;
+    width: min(100%, 720px);
+  }
+  .hero-proof-card {
+    padding: 16px 16px 14px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .hero-proof-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+  }
+  .hero-proof-value {
+    margin-top: 8px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(18px, 2vw, 24px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+  .hero-proof-meta {
+    margin-top: 5px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.5;
   }
   .hero-marquee {
     position: relative;
@@ -347,6 +426,63 @@
     color: rgba(255,255,255,0.72);
     font-size: 14px;
     line-height: 1.6;
+  }
+  .hero-spotlight {
+    margin-top: 20px;
+    padding: 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .hero-spotlight-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+  }
+  .hero-spotlight-title {
+    margin-top: 10px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: #fff;
+    line-height: 1;
+  }
+  .hero-spotlight-meta {
+    margin-top: 10px;
+    color: rgba(255,255,255,0.72);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .hero-spotlight-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .hero-spotlight-stat {
+    padding: 12px 12px 11px;
+    border-radius: 16px;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .hero-spotlight-stat-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.45);
+  }
+  .hero-spotlight-stat-value {
+    margin-top: 6px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #B5FF5A;
   }
   .hero-panel-metrics {
     display: grid;
@@ -542,11 +678,15 @@
     .hero-grid { padding: 20px; gap: 18px; }
     .hero-kicker { margin-bottom: 14px; font-size: 10px; }
     .hero-sub { font-size: 14px; margin-top: 16px; }
+    .hero-actions { margin-top: 18px; gap: 8px; }
+    .hero-button { width: 100%; justify-content: space-between; padding: 13px 14px; font-size: 13px; }
+    .hero-proof-row { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
     .hero-cta-row { margin-top: 18px; gap: 8px; }
     .hero-pill { padding: 9px 12px; font-size: 11px; }
     .hero-marquee { margin-top: 18px; }
     .hero-marquee-track { padding: 10px 14px; font-size: 10px; gap: 18px; }
     .hero-panel { padding: 18px; border-radius: 22px; }
+    .hero-spotlight { padding: 16px; border-radius: 18px; }
     .hero-panel-metrics { gap: 10px; }
     .hero-panel-metric-value { font-size: 24px; }
     .hero-spotify-badge { top: 14px; right: 14px; font-size: 10px; padding: 7px 11px 7px 8px; }
@@ -990,6 +1130,10 @@ function App() {
     return { upcoming, friends: friends.length, tickets: totalTix, year: thisYear };
   }, [showsEnriched, tickets, friends]);
 
+  const nextShow = useMemo(() => {
+    return sorted.find((s) => !s.past) || showsEnriched.find((s) => !s.past) || null;
+  }, [sorted, showsEnriched]);
+
   const [profileTarget, setProfileTarget] = useState(null); // null=closed, false=new, friend=edit
   const [viewedFriendId, setViewedFriendId] = useState(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(() => !localStorage.getItem('currentUserId'));
@@ -1152,7 +1296,13 @@ function App() {
 
   return h('div', null,
     // Hero
-    h(Hero, { totals }),
+    h(Hero, {
+      totals,
+      nextShow,
+      currentUser,
+      onOpenShows: () => setTab('shows'),
+      onOpenMyTickets: () => setTab('friend'),
+    }),
     // Night mode toggle (fixed top-right)
     h('button', {
       onClick: () => setNightOverride(prev => prev === null ? !isNight : !prev),
@@ -1331,7 +1481,7 @@ function App() {
 }
 
 // ===== Hero =====
-function Hero({ totals }) {
+function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
   const marqueeItems = [
     'Real-time crew tracking',
     'Ticket intel',
@@ -1342,6 +1492,10 @@ function Hero({ totals }) {
   ];
   const baseVideo = 'https://assets.mixkit.co/videos/4026/4026-720.mp4';
   const fireworksVideo = 'https://assets.mixkit.co/videos/4157/4157-720.mp4';
+  const userFirstName = currentUser?.name?.split(' ')[0] || 'My';
+  const spotlightMeta = nextShow
+    ? `${formatDate(nextShow.date)}${nextShow.venue ? ' · ' + nextShow.venue : ''}`
+    : 'No upcoming show loaded yet';
 
   return h('div', { className: 'hero' },
     h('video', {
@@ -1383,12 +1537,39 @@ function Hero({ totals }) {
       h('div', { className: 'hero-content' },
         h('div', { className: 'hero-kicker' },
           h('span', { className: 'hero-kicker-dot' }),
-          'Where football energy meets rave obsession'
+          'Soccer Raves Show Log · private crew board'
         ),
         h('h1', { className: 'hero-title' },
-          'Soccer Raves ', h('span', { className: 'accent' }, 'Show Log')
+          'The season doesn’t end at full time. ', h('span', { className: 'accent' }, 'It turns into a rave.')
         ),
-        h('p', { className: 'hero-sub' }, 'A premium live board for the nights that matter, who is going, who already has tickets, and which shows are turning into core memories before the doors even open.'),
+        h('p', { className: 'hero-sub' }, 'A cinematic home base for the nights that matter, who is already in, who still needs tickets, and which shows are turning into core memories before the group chat catches up.'),
+        h('div', { className: 'hero-actions' },
+          h('button', { className: 'hero-button hero-button-primary', onClick: onOpenShows },
+            h('span', null, 'Enter the board'),
+            h('span', { className: 'hero-button-kicker' }, `${totals.upcoming} upcoming`)
+          ),
+          h('button', { className: 'hero-button hero-button-secondary', onClick: onOpenMyTickets },
+            h('span', null, `${userFirstName} tickets`),
+            h('span', { className: 'hero-button-kicker' }, 'jump to my stack')
+          ),
+        ),
+        h('div', { className: 'hero-proof-row' },
+          h('div', { className: 'hero-proof-card' },
+            h('div', { className: 'hero-proof-label' }, 'Next drop'),
+            h('div', { className: 'hero-proof-value' }, nextShow ? formatDate(nextShow.date) : 'TBD'),
+            h('div', { className: 'hero-proof-meta' }, nextShow?.venue || 'Waiting on the next venue lock')
+          ),
+          h('div', { className: 'hero-proof-card' },
+            h('div', { className: 'hero-proof-label' }, 'Headliner'),
+            h('div', { className: 'hero-proof-value' }, nextShow?.artist || 'No show loaded'),
+            h('div', { className: 'hero-proof-meta' }, nextShow ? `${nextShow.goingCount || 0} friends already in` : 'Build the next night out')
+          ),
+          h('div', { className: 'hero-proof-card' },
+            h('div', { className: 'hero-proof-label' }, 'System'),
+            h('div', { className: 'hero-proof-value' }, 'Live'),
+            h('div', { className: 'hero-proof-meta' }, 'Tickets, venues, reactions, and crew movement in one place')
+          ),
+        ),
         h('div', { className: 'hero-cta-row' },
           h('div', { className: 'hero-pill' }, h('strong', null, 'LIVE'), 'See the crew move in real time'),
           h('div', { className: 'hero-pill' }, h('strong', null, 'LOCKED'), 'Track who already has tickets'),
@@ -1403,9 +1584,24 @@ function Hero({ totals }) {
         )
       ),
       h('div', { className: 'hero-panel' },
-        h('div', { className: 'hero-panel-label' }, "Tonight's signal"),
+        h('div', { className: 'hero-panel-label' }, 'Tonight\'s signal'),
         h('div', { className: 'hero-panel-value' }, `${totals.upcoming} shows on the radar`),
-        h('p', { className: 'hero-panel-copy' }, 'Built to feel like an invitation, not a spreadsheet. Dark, cinematic, and immediate from the first frame.'),
+        h('p', { className: 'hero-panel-copy' }, 'Built to feel like a premium invite, not a spreadsheet. Dark, immediate, and sharp enough to make the first scroll feel like doors opening.'),
+        h('div', { className: 'hero-spotlight' },
+          h('div', { className: 'hero-spotlight-label' }, 'Spotlight'),
+          h('div', { className: 'hero-spotlight-title' }, nextShow?.artist || 'Load the next headliner'),
+          h('div', { className: 'hero-spotlight-meta' }, spotlightMeta),
+          h('div', { className: 'hero-spotlight-stats' },
+            h('div', { className: 'hero-spotlight-stat' },
+              h('div', { className: 'hero-spotlight-stat-label' }, 'Going'),
+              h('div', { className: 'hero-spotlight-stat-value' }, nextShow?.goingCount || 0)
+            ),
+            h('div', { className: 'hero-spotlight-stat' },
+              h('div', { className: 'hero-spotlight-stat-label' }, 'Tickets'),
+              h('div', { className: 'hero-spotlight-stat-value' }, nextShow?.totalTix || 0)
+            )
+          )
+        ),
         h('div', { className: 'hero-panel-metrics' },
           h('div', { className: 'hero-panel-metric' },
             h('div', { className: 'hero-panel-metric-label' }, 'Friends'),
