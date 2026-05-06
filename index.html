@@ -196,6 +196,8 @@
   html:not(.night) .chip-past { background: rgba(7,16,8,0.04); color: rgba(7,16,8,0.42); }
   html:not(.night) .going-stat { background: rgba(255,255,255,0.72); border-color: rgba(141,211,39,0.28); box-shadow: 0 12px 26px rgba(141,211,39,0.12); }
   html:not(.night) .going-stat-value { color: #4f8d00; -webkit-text-fill-color: #4f8d00; }
+  html:not(.night) .show-card-top > span:first-child { background: rgba(7,16,8,0.05); }
+  html:not(.night) .show-card-admin .text-action { background: rgba(7,16,8,0.04); border-color: rgba(7,16,8,0.08); }
   html:not(.night) .notice-banner { background: linear-gradient(180deg, rgba(255,170,0,0.12) 0%, rgba(255,170,0,0.06) 100%); color: #9b6500; border-color: rgba(255,170,0,0.2); box-shadow: 0 14px 30px rgba(16,24,18,0.06); }
 
   /* ── Background layer (Claude design) ── */
@@ -664,6 +666,8 @@
 
   /* User picker */
   .user-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 0; padding: 14px 18px; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .user-picker-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .user-picker-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .user-picker-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.46); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
   .user-picker select { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 8px 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
 
@@ -684,6 +688,9 @@
   .ghost-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); transform: translateY(-1px); }
   .ghost-btn.active { background: #0F0F0F; color: #fff; }
   .shows-stack { display: flex; flex-direction: column; gap: 14px; }
+  .roster-shell { padding: 8px 16px 12px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .roster-picker { display: flex; align-items: center; gap: 8px; }
+  .roster-picker select { flex: 1; min-width: 0; }
 
   /* Show card */
   .show-card { background: linear-gradient(180deg, rgba(18,21,31,0.92) 0%, rgba(11,13,21,0.94) 100%); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 18px 20px; position: relative; overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
@@ -799,37 +806,48 @@
   }
 
   @media (max-width: 600px) {
-    #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 60px; }
+    #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px calc(env(safe-area-inset-bottom, 0px) + 76px); }
 
     /* Hero */
     .hero { min-height: auto; border-radius: 22px; }
     .hero::after { inset: 10px; border-radius: 16px; }
-    .hero-grid { padding: 68px 18px 18px; gap: 14px; }
+    .hero-grid { padding: 56px 16px 16px; gap: 12px; }
     .hero-content { max-width: 100%; }
     .hero-kicker { margin-bottom: 12px; font-size: 9px; padding: 7px 11px; }
     .hero-title { font-size: clamp(26px, 11.5vw, 40px); max-width: 7ch; }
-    .hero-sub { font-size: 13px; margin-top: 14px; line-height: 1.5; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .hero-sub { font-size: 13px; margin-top: 12px; line-height: 1.45; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .hero-actions { margin-top: 16px; gap: 8px; }
     .hero-button { width: 100%; justify-content: space-between; padding: 12px 14px; font-size: 13px; min-height: 52px; }
     .hero-proof-row { display: none; }
     .hero-cta-row { display: none; }
     .hero-marquee { display: none; }
-    .hero-panel { padding: 14px; border-radius: 18px; width: 100%; }
+    .hero-panel { padding: 12px; border-radius: 18px; width: 100%; }
     .hero-panel-label { font-size: 10px; }
     .hero-panel-value { margin-top: 8px; font-size: clamp(28px, 9vw, 38px); }
-    .hero-panel-copy { margin-top: 8px; font-size: 13px; line-height: 1.5; }
+    .hero-panel-copy { display: none; }
     .hero-panel-metrics { gap: 8px; }
     .hero-panel-metric { padding: 12px 10px 10px; border-radius: 14px; }
     .hero-panel-metric-label { font-size: 9px; }
     .hero-panel-metric-value { font-size: 20px; }
-    .hero-spotify-badge { top: 12px; right: 12px; font-size: 9px; padding: 6px 10px 6px 8px; max-width: calc(100% - 24px); }
+    .hero-spotify-badge { display: none; }
 
 
     /* Shell + tabs */
     .top-shell { border-radius: 20px; margin-bottom: 14px; }
-    .user-picker { padding: 12px 14px; }
-    .tabs { padding: 10px 12px 12px; gap: 8px; flex-wrap: wrap; }
-    .tab { padding: 10px 12px; font-size: 13px; }
+    .user-picker { padding: 12px 12px 10px; gap: 10px; flex-wrap: wrap; }
+    .user-picker-main { width: 100%; }
+    .user-picker-avatar { width: 32px; height: 32px; }
+    .user-picker select { flex: 1; min-width: 0; min-height: 42px; }
+    .user-picker-actions { width: 100%; margin-left: 0; }
+    .user-picker-edit, .user-picker-new { min-height: 36px; display: inline-flex; align-items: center; }
+    .tabs { padding: 8px 12px 12px; gap: 10px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 10px 12px; font-size: 13px; min-height: 40px; flex: 0 0 auto; }
+    .roster-shell { padding: 8px 12px 12px; }
+    .roster-picker { align-items: stretch; flex-wrap: wrap; }
+    .roster-picker .user-picker-label { width: 100%; }
+    .profile-preview { padding: 12px 14px; border-radius: 16px; align-items: center; }
+    .profile-preview .profile-genres { display: none; }
 
     /* Filters */
     .filter-shell { gap: 8px; margin-bottom: 14px; }
@@ -843,27 +861,33 @@
     .filter-panel select { flex: 1 1 calc(33% - 6px); min-width: 0; width: auto; }
     .filter-actions { width: 100%; }
     .filter-actions .ghost-btn { flex: 1 1 100%; text-align: center; }
+    .filter-toggle, .filter-toolbar .primary-btn, .filter-actions .ghost-btn { min-height: 44px; }
 
     /* Show card */
-    .show-card { padding: 12px 13px; border-radius: 20px; }
+    .show-card { padding: 10px 10px 12px; border-radius: 20px; }
     .artist-row { flex-direction: column; gap: 12px; }
-    .artist-photo { width: 100%; height: 164px; font-size: 28px; border-radius: 18px; }
-    .show-card-body { width: 100%; }
-    .show-card-main { gap: 10px; }
-    .show-title { font-size: 15px; }
+    .artist-photo { width: 100%; height: 142px; font-size: 28px; border-radius: 18px; }
+    .show-card-body { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .show-card-main { gap: 12px; }
+    .show-title { font-size: 16px; }
     .show-meta { font-size: 10px; }
+    .show-card-top > span:first-child { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); }
     .show-card-top { gap: 6px; }
     .venue-link { margin-top: 8px; max-width: 100%; }
     .show-note { font-size: 11px; margin-top: 7px; }
-    .going-stat { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 10px 12px; border-radius: 14px; }
+    .going-stat { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 9px 10px; border-radius: 14px; }
     .going-stat-value { font-size: 22px; }
     .going-stat-label { font-size: 9px; }
-    .chips { gap: 8px; }
-    .chip { max-width: 100%; min-height: 34px; }
-    .show-ticket-links { margin-top: 12px; align-items: stretch; gap: 8px; }
-    .get-tickets-btn { width: 100%; justify-content: space-between; padding: 10px 12px; min-height: 42px; }
+    .chips { gap: 8px; margin-top: 12px; }
+    .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
+    .chip-count { padding: 2px 6px; }
+    .show-ticket-links { margin-top: 10px; align-items: stretch; gap: 8px; }
+    .get-tickets-btn { width: 100%; justify-content: space-between; padding: 10px 12px; min-height: 44px; border-radius: 14px; font-size: 12px; }
+    .get-tickets-price { font-size: 10px; }
     .show-card-footer { flex-direction: column; align-items: stretch; gap: 10px; }
-    .show-card-admin { width: 100%; justify-content: space-between; }
+    .show-card-footer .ghost-btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .show-card-admin { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .show-card-admin .text-action { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
     .reactions { gap: 8px; align-items: stretch; }
     .react-btn, .media-btn { min-height: 36px; }
 
@@ -1524,8 +1548,8 @@ function App() {
     h('div', { className: 'top-shell' },
       // User picker
       h('div', { className: 'user-picker', style: { borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 0 } },
-        h(Avatar, { friend: currentUser, size: 28 }),
-        h(React.Fragment, null,
+        h('div', { className: 'user-picker-main' },
+          h(Avatar, { friend: currentUser, size: 28 }),
           h('span', { className: 'user-picker-label' }, 'you are'),
           h('select', { value: currentUserId || '', onChange: (e) => {
             const v = e.target.value;
@@ -1535,7 +1559,9 @@ function App() {
             h('option', { value: '' }, '— pick name —'),
             friends.map((f) => h('option', { key: f.id, value: f.id }, f.name)),
             isAdmin && h('option', { value: 'new' }, '＋ Create profile')
-          ),
+          )
+        ),
+        h('div', { className: 'user-picker-actions' },
           // Quick switch-back when an admin is posing as someone else.
           adminIdentity && currentUser?.id !== adminIdentity.id && h('button', {
             className: 'user-picker-new',
@@ -2662,8 +2688,8 @@ function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser,
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
   const sortedFriends = [...friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  return h('div', { style: { padding: '8px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' } },
-    h('div', { className: 'roster-picker', style: { display: 'flex', alignItems: 'center', gap: 8 } },
+  return h('div', { className: 'roster-shell' },
+    h('div', { className: 'roster-picker' },
       h('span', { className: 'user-picker-label' }, 'profiles'),
       h('select', {
         value: viewedFriendId || '',
