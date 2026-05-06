@@ -170,9 +170,20 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: saturate(1.08) contrast(1.04) brightness(0.78);
-    transform: scale(1.04);
+    pointer-events: none;
     z-index: 0;
+  }
+  .hero-video-base {
+    filter: saturate(1.12) contrast(1.08) brightness(0.72);
+    transform: scale(1.05);
+    object-position: center center;
+  }
+  .hero-video-fireworks {
+    filter: saturate(1.28) contrast(1.14) brightness(0.92) hue-rotate(-8deg);
+    transform: scale(1.1);
+    mix-blend-mode: screen;
+    opacity: 0.42;
+    object-position: center top;
   }
   .hero-ambient {
     position: absolute;
@@ -1329,18 +1340,33 @@ function Hero({ totals }) {
     'Lineup memory',
     'Party logistics',
   ];
+  const baseVideo = 'https://assets.mixkit.co/videos/4026/4026-720.mp4';
+  const fireworksVideo = 'https://assets.mixkit.co/videos/4157/4157-720.mp4';
 
   return h('div', { className: 'hero' },
     h('video', {
-      className: 'hero-video',
+      className: 'hero-video hero-video-base',
       autoPlay: true,
       muted: true,
       loop: true,
       playsInline: true,
-      preload: 'auto',
+      preload: 'metadata',
       poster: 'Soccer.png',
     },
+      h('source', { src: baseVideo, type: 'video/mp4' }),
       h('source', { src: 'hero-header-video.mp4', type: 'video/mp4' })
+    ),
+    h('video', {
+      className: 'hero-video hero-video-fireworks',
+      autoPlay: true,
+      muted: true,
+      loop: true,
+      playsInline: true,
+      preload: 'metadata',
+      poster: 'Soccer.png',
+      'aria-hidden': 'true',
+    },
+      h('source', { src: fireworksVideo, type: 'video/mp4' })
     ),
     h('div', { className: 'hero-ambient a' }),
     h('div', { className: 'hero-ambient b' }),
