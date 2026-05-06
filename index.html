@@ -670,26 +670,34 @@
   }
 
   @media (max-width: 600px) {
-    #root { padding: 12px 12px 60px; }
+    #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 60px; }
 
     /* Hero */
-    .hero { min-height: 560px; border-radius: 24px; }
-    .hero::after { inset: 12px; border-radius: 18px; }
-    .hero-grid { padding: 20px; gap: 18px; }
-    .hero-kicker { margin-bottom: 14px; font-size: 10px; }
-    .hero-sub { font-size: 14px; margin-top: 16px; }
-    .hero-actions { margin-top: 18px; gap: 8px; }
-    .hero-button { width: 100%; justify-content: space-between; padding: 13px 14px; font-size: 13px; }
-    .hero-proof-row { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-    .hero-cta-row { margin-top: 18px; gap: 8px; }
-    .hero-pill { padding: 9px 12px; font-size: 11px; }
-    .hero-marquee { margin-top: 18px; }
-    .hero-marquee-track { padding: 10px 14px; font-size: 10px; gap: 18px; }
-    .hero-panel { padding: 18px; border-radius: 22px; }
-    .hero-spotlight { padding: 16px; border-radius: 18px; }
-    .hero-panel-metrics { gap: 10px; }
-    .hero-panel-metric-value { font-size: 24px; }
-    .hero-spotify-badge { top: 14px; right: 14px; font-size: 10px; padding: 7px 11px 7px 8px; }
+    .hero { min-height: auto; border-radius: 22px; }
+    .hero::after { inset: 10px; border-radius: 16px; }
+    .hero-grid { padding: 68px 18px 18px; gap: 14px; }
+    .hero-content { max-width: 100%; }
+    .hero-kicker { margin-bottom: 12px; font-size: 9px; padding: 7px 11px; }
+    .hero-title { font-size: clamp(26px, 11.5vw, 40px); max-width: 7ch; }
+    .hero-sub { font-size: 13px; margin-top: 14px; line-height: 1.5; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .hero-actions { margin-top: 16px; gap: 8px; }
+    .hero-button { width: 100%; justify-content: space-between; padding: 12px 14px; font-size: 13px; min-height: 52px; }
+    .hero-proof-row { display: none; }
+    .hero-cta-row { display: none; }
+    .hero-marquee { display: none; }
+    .hero-panel { padding: 14px; border-radius: 18px; width: 100%; }
+    .hero-panel-label { font-size: 10px; }
+    .hero-panel-value { margin-top: 8px; font-size: clamp(28px, 9vw, 38px); }
+    .hero-panel-copy { margin-top: 8px; font-size: 13px; line-height: 1.5; }
+    .hero-spotlight { margin-top: 14px; padding: 14px; border-radius: 16px; }
+    .hero-spotlight-title { font-size: 24px; }
+    .hero-spotlight-meta { font-size: 12px; }
+    .hero-spotlight-stats { margin-top: 12px; }
+    .hero-panel-metrics { gap: 8px; }
+    .hero-panel-metric { padding: 12px 10px 10px; border-radius: 14px; }
+    .hero-panel-metric-label { font-size: 9px; }
+    .hero-panel-metric-value { font-size: 20px; }
+    .hero-spotify-badge { top: 12px; right: 12px; font-size: 9px; padding: 6px 10px 6px 8px; max-width: calc(100% - 24px); }
 
 
     /* Tabs */
@@ -1307,7 +1315,7 @@ function App() {
     h('button', {
       onClick: () => setNightOverride(prev => prev === null ? !isNight : !prev),
       title: isNight ? 'Switch to day mode' : 'Switch to night mode',
-      style: { position: 'fixed', top: 16, left: 20, zIndex: 50, width: 36, height: 36, borderRadius: '50%', background: isNight ? '#2a2a3a' : 'rgba(255,255,255,0.9)', border: isNight ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)', fontSize: 18, lineHeight: '36px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', cursor: 'pointer', backdropFilter: 'blur(6px)' }
+      style: { position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: 14, zIndex: 50, width: 34, height: 34, borderRadius: '50%', background: isNight ? '#2a2a3a' : 'rgba(255,255,255,0.9)', border: isNight ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)', fontSize: 16, lineHeight: '34px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', cursor: 'pointer', backdropFilter: 'blur(6px)' }
     }, isNight ? '☀️' : '🌙'),
     // White header panel: user-picker + roster + tabs (no event list inside)
     h('div', { style: { background: 'var(--surface)', borderRadius: '18px 18px 0 0', marginBottom: 0 } },
