@@ -30,17 +30,18 @@
     --card-bg: #fff;
   }
   html.night {
-    --html-bg: #0d0d12;
-    --body-color: #e8e8e8;
-    --card-bg: #2a2535;
-    --surface: #1a1a24;
-    --bg: #0d0d12;
-    --border: rgba(255,255,255,0.08);
-    --border-2: rgba(255,255,255,0.14);
-    --text: #e8e8e8;
+    --html-bg: #07070d;
+    --body-color: #f0f0f0;
+    --card-bg: rgba(255,255,255,0.045);
+    --surface: #0f0f18;
+    --bg: #07070d;
+    --border: rgba(255,255,255,0.07);
+    --border-2: rgba(255,255,255,0.12);
+    --text: #f0f0f0;
     --text-2: #aaaaaa;
-    --text-3: #666666;
+    --text-3: #555566;
     --danger-bg: #2a1018;
+    --lime-dark: #B5FF5A;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { background: var(--html-bg); transition: background 1s; color-scheme: light; }
@@ -61,8 +62,9 @@
   html.night .chip-count { background: rgba(255,255,255,0.15); }
   html.night .friend-row:hover { background: #1e1e2e !important; }
   html.night .friend-row:active { background: #16161e !important; }
-  html.night .show-card { background: #2a2535 !important; }
-  html.night .show-card.cancelled { background: #2a1a20 !important; }
+  html.night .show-card { background: rgba(255,255,255,0.045) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.08) !important; box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important; }
+  html.night .show-card:hover { transform: translateY(-3px) !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(181,255,90,0.12) !important; }
+  html.night .show-card.cancelled { background: rgba(255,61,90,0.07) !important; border-color: rgba(255,61,90,0.18) !important; }
   html.night .profile-card,
   html.night .profile-preview,
   html.night .friend-row { background: var(--card-bg) !important; color: var(--text); }
@@ -83,8 +85,12 @@
   html.night .section-divider::before, html.night .section-divider::after { background: var(--border); }
   html.night .empty-state { color: var(--text-3); }
   html.night .empty-state h3 { color: var(--text-2); }
-  html.night .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.35; }
-  html.night body::before { background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px); }
+  html.night .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.45; }
+  html.night body::before { background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px); }
+  html.night .hero { border-color: rgba(181,255,90,0.7) !important; box-shadow: 6px 6px 0 rgba(181,255,90,0.5), 0 0 40px rgba(181,255,90,0.08) !important; }
+  html.night .user-picker-new { background: rgba(181,255,90,0.12) !important; color: var(--lime) !important; }
+  html.night .user-picker-new:hover { background: rgba(181,255,90,0.2) !important; }
+  html.night .badge-upcoming { background: rgba(181,255,90,0.12) !important; color: var(--lime) !important; }
 
   /* ── Background layer (Claude design) ── */
   .bg-pattern { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
@@ -181,6 +187,14 @@
   .going-list { display: flex; flex-direction: column; gap: 2px; margin: 14px 0 4px; }
   .going-list-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.03); }
   html.night .going-list-row { background: rgba(255,255,255,0.05); }
+  html.night .going-stat { background: rgba(0,0,0,0.5) !important; border: 1px solid rgba(181,255,90,0.25) !important; box-shadow: 0 0 18px rgba(181,255,90,0.12), inset 0 0 12px rgba(181,255,90,0.04) !important; }
+  html.night .going-stat:hover { box-shadow: 0 0 28px rgba(181,255,90,0.22), 0 4px 14px rgba(0,0,0,0.4) !important; }
+  html.night .stat-card { background: rgba(255,255,255,0.045) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.07) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.35) !important; }
+  html.night .stat-value { color: var(--text) !important; }
+  html.night .show-meta { color: var(--lime) !important; }
+  html.night .show-title { color: var(--text) !important; }
+  html.night .profile-card { background: rgba(255,255,255,0.045) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.08) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.35) !important; }
+  html.night .friend-row { background: rgba(255,255,255,0.045) !important; border: 1px solid rgba(255,255,255,0.07) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.25) !important; }
   .going-list-name { font-weight: 600; font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .going-list-tix { font-size: 11px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; color: #999; text-transform: uppercase; }
   .going-stat-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.12em; }
@@ -540,7 +554,7 @@ function App() {
   useEffect(() => {
     function isNightEST() {
       const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
-      return h >= 21 || h < 6;
+      return true; // always dark
     }
     const apply = () => {
       const night = nightOverride !== null ? nightOverride : isNightEST();
