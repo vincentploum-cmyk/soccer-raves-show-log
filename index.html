@@ -3,31 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="light" />
-<meta name="supported-color-schemes" content="light" />
+<meta name="color-scheme" content="light dark" />
+<meta name="supported-color-schemes" content="light dark" />
 <title>Soccer Raves Show Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #07070d;
-    --surface: #0f0f18;
-    --border: rgba(255,255,255,0.07);
-    --border-2: rgba(255,255,255,0.12);
-    --text: #f0f0f0;
-    --text-2: #aaaaaa;
-    --text-3: #555566;
+    --bg: #eef4ef;
+    --surface: rgba(255,255,255,0.82);
+    --border: rgba(7,16,8,0.08);
+    --border-2: rgba(7,16,8,0.12);
+    --text: #071008;
+    --text-2: rgba(7,16,8,0.68);
+    --text-3: rgba(7,16,8,0.46);
     --lime: #B5FF5A;
-    --lime-dark: #B5FF5A;
+    --lime-dark: #071008;
     --magenta: #FF2D92;
     --purple: #b67fff;
     --amber: #ffaa00;
     --red: #ff3d5a;
     --danger-bg: #2a1018;
-    --html-bg: #07070d;
-    --body-color: #f0f0f0;
-    --card-bg: rgba(255,255,255,0.045);
+    --html-bg: #f3f7f1;
+    --body-color: #071008;
+    --card-bg: rgba(255,255,255,0.72);
   }
   html.night {
     --html-bg: #07070d;
@@ -44,9 +44,9 @@
     --lime-dark: #B5FF5A;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { background: var(--html-bg); transition: background 1s; color-scheme: light; }
+  html { background: var(--html-bg); transition: background 1s; color-scheme: light dark; }
   html.night { color-scheme: dark; }
-  body { min-height: 100vh; background: radial-gradient(circle at top, rgba(181,255,90,0.10), transparent 22%), radial-gradient(circle at 82% 18%, rgba(255,45,146,0.14), transparent 18%), linear-gradient(180deg, #05070c 0%, #07070d 42%, #090b12 100%); color: var(--body-color); font-family: 'Space Grotesk', sans-serif; transition: color 1s; }
+  body { min-height: 100vh; background: radial-gradient(circle at top, rgba(181,255,90,0.12), transparent 24%), radial-gradient(circle at 82% 18%, rgba(255,45,146,0.10), transparent 18%), linear-gradient(180deg, #f7fbf6 0%, #edf4ef 46%, #e5eef1 100%); color: var(--body-color); font-family: 'Space Grotesk', sans-serif; transition: color 1s, background 1s; }
 
   /* Night-mode overrides for white UI panels */
   html.night .top-shell,
@@ -90,9 +90,113 @@
   html.night .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.45; }
   html.night body::before { background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px); }
   html.night .hero { border-color: rgba(181,255,90,0.7) !important; box-shadow: 6px 6px 0 rgba(181,255,90,0.5), 0 0 40px rgba(181,255,90,0.08) !important; }
-  html.night .user-picker-new { background: rgba(181,255,90,0.12) !important; color: var(--lime) !important; }
-  html.night .user-picker-new:hover { background: rgba(181,255,90,0.2) !important; }
-  html.night .badge-upcoming { background: rgba(181,255,90,0.12) !important; color: var(--lime) !important; }
+  html.night .user-picker-new { background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%) !important; color: #071008 !important; }
+  html.night .user-picker-new:hover { background: linear-gradient(135deg, #a8f048 0%, #cbed7b 100%) !important; }
+  html.night .badge-upcoming { background: #B5FF5A !important; color: #071008 !important; }
+
+  html:not(.night) .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.2; }
+  html:not(.night) body::before { background-image: repeating-linear-gradient(to bottom, rgba(7,16,8,0.018) 0 1px, transparent 1px 3px); }
+  html:not(.night) .top-shell,
+  html:not(.night) .filter-toggle,
+  html:not(.night) .filter-panel,
+  html:not(.night) .show-card,
+  html:not(.night) .leaderboard-shell,
+  html:not(.night) .visit-log-shell,
+  html:not(.night) .profile-card,
+  html:not(.night) .profile-preview,
+  html:not(.night) .friend-row,
+  html:not(.night) .stat-card,
+  html:not(.night) .empty-state {
+    background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(247,250,246,0.94) 100%) !important;
+    border: 1px solid rgba(7,16,8,0.08) !important;
+    box-shadow: 0 18px 44px rgba(16,24,18,0.08), inset 0 1px 0 rgba(255,255,255,0.65) !important;
+    color: #071008;
+  }
+  html:not(.night) .top-shell { box-shadow: 0 24px 60px rgba(16,24,18,0.08), inset 0 1px 0 rgba(255,255,255,0.65) !important; }
+  html:not(.night) .user-picker,
+  html:not(.night) .tabs { border-color: rgba(7,16,8,0.08); }
+  html:not(.night) .user-picker-label,
+  html:not(.night) .filter-toggle-label,
+  html:not(.night) .section-divider,
+  html:not(.night) .leaderboard-eyebrow,
+  html:not(.night) .leaderboard-score-label,
+  html:not(.night) .text-action,
+  html:not(.night) .footnote,
+  html:not(.night) .friend-row-sub,
+  html:not(.night) .profile-card-meta,
+  html:not(.night) .show-note,
+  html:not(.night) .hero-button-kicker { color: rgba(7,16,8,0.52); }
+  html:not(.night) .leaderboard-title,
+  html:not(.night) .leaderboard-name,
+  html:not(.night) .show-title,
+  html:not(.night) .friend-row-title,
+  html:not(.night) .profile-card-name,
+  html:not(.night) .empty-state h3,
+  html:not(.night) .leaderboard-score-value,
+  html:not(.night) .stat-value { color: #071008 !important; }
+  html:not(.night) .leaderboard-copy,
+  html:not(.night) .friend-page-copy,
+  html:not(.night) .show-note,
+  html:not(.night) .going-stat-label,
+  html:not(.night) .profile-card-meta,
+  html:not(.night) .empty-state { color: rgba(7,16,8,0.62); }
+  html:not(.night) .filter-toggle-value,
+  html:not(.night) .filter-toggle-icon,
+  html:not(.night) .user-picker-edit,
+  html:not(.night) .friend-row-chevron { color: rgba(7,16,8,0.56); }
+  html:not(.night) .leaderboard-row,
+  html:not(.night) .visit-log-row,
+  html:not(.night) .reactions,
+  html:not(.night) .hero-panel,
+  html:not(.night) .hero-proof-card,
+  html:not(.night) .hero-marquee,
+  html:not(.night) .going-list-row {
+    background: rgba(7,16,8,0.035);
+    border: 1px solid rgba(7,16,8,0.06);
+  }
+  html:not(.night) .tab,
+  html:not(.night) .ghost-btn,
+  html:not(.night) .venue-link,
+  html:not(.night) .get-tickets-btn,
+  html:not(.night) .react-btn,
+  html:not(.night) .media-btn,
+  html:not(.night) .user-picker select,
+  html:not(.night) .roster-picker select,
+  html:not(.night) .leaderboard-year-picker {
+    background: rgba(255,255,255,0.72);
+    color: rgba(7,16,8,0.76);
+    border: 1px solid rgba(7,16,8,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+  }
+  html:not(.night) .tab:hover,
+  html:not(.night) .ghost-btn:hover,
+  html:not(.night) .venue-link:hover,
+  html:not(.night) .get-tickets-btn:hover,
+  html:not(.night) .react-btn:hover,
+  html:not(.night) .media-btn:hover,
+  html:not(.night) .user-picker select:hover,
+  html:not(.night) .roster-picker select:hover,
+  html:not(.night) .leaderboard-year-picker:hover { background: rgba(255,255,255,0.92); color: #071008; }
+  html:not(.night) .show-card::after { background: radial-gradient(circle at top right, rgba(181,255,90,0.12), transparent 28%), radial-gradient(circle at bottom left, rgba(255,45,146,0.10), transparent 22%); }
+  html:not(.night) .show-card.upcoming::before { background: #8dd327; }
+  html:not(.night) .show-card.cancelled { background: linear-gradient(180deg, rgba(255,241,243,0.96) 0%, rgba(255,233,237,0.98) 100%) !important; border-color: rgba(255,61,90,0.14) !important; }
+  html:not(.night) .show-meta { color: #4f8d00; }
+  html:not(.night) .show-card.past .show-meta,
+  html:not(.night) .leaderboard-sub,
+  html:not(.night) .stat-label,
+  html:not(.night) .modal-sub { color: rgba(7,16,8,0.46); }
+  html:not(.night) .venue-link,
+  html:not(.night) .leaderboard-year-picker,
+  html:not(.night) .roster-picker select { color: rgba(7,16,8,0.72); }
+  html:not(.night) .reactions-label { color: rgba(7,16,8,0.56); }
+  html:not(.night) .chip { background: rgba(7,16,8,0.05); color: rgba(7,16,8,0.78); border-color: rgba(7,16,8,0.08); }
+  html:not(.night) .chip:hover { background: rgba(7,16,8,0.08); }
+  html:not(.night) .chip-1 { background: rgba(7,16,8,0.05); color: rgba(7,16,8,0.78); }
+  html:not(.night) .chip-count { background: rgba(7,16,8,0.10); color: #071008; }
+  html:not(.night) .chip-past { background: rgba(7,16,8,0.04); color: rgba(7,16,8,0.42); }
+  html:not(.night) .going-stat { background: rgba(255,255,255,0.72); border-color: rgba(141,211,39,0.28); box-shadow: 0 12px 26px rgba(141,211,39,0.12); }
+  html:not(.night) .going-stat-value { color: #4f8d00; -webkit-text-fill-color: #4f8d00; }
+  html:not(.night) .notice-banner { background: linear-gradient(180deg, rgba(255,170,0,0.12) 0%, rgba(255,170,0,0.06) 100%); color: #9b6500; border-color: rgba(255,170,0,0.2); box-shadow: 0 14px 30px rgba(16,24,18,0.06); }
 
   /* ── Background layer (Claude design) ── */
   .bg-pattern { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
@@ -144,6 +248,19 @@
     align-items: stretch;
     isolation: isolate;
   }
+  .hero.is-day {
+    background: #dcecf8;
+    border-color: rgba(7,16,8,0.12);
+    box-shadow: 0 32px 90px rgba(71,114,151,0.18), 0 0 0 1px rgba(255,255,255,0.55), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .hero.is-day::before {
+    background:
+      linear-gradient(180deg, rgba(248,251,255,0.12) 0%, rgba(245,249,255,0.24) 24%, rgba(240,246,250,0.68) 72%, rgba(237,244,247,0.94) 100%),
+      linear-gradient(115deg, rgba(181,255,90,0.18) 0%, transparent 28%),
+      linear-gradient(300deg, rgba(77,234,255,0.18) 0%, transparent 32%),
+      radial-gradient(circle at 18% 20%, rgba(255,255,255,0.24), transparent 20%);
+  }
+  .hero.is-day::after { border-color: rgba(255,255,255,0.44); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.24); }
   .hero::before {
     content: "";
     position: absolute;
@@ -180,6 +297,7 @@
     transform: scale(1.05);
     object-position: center center;
   }
+  .hero.is-day .hero-video-base { filter: saturate(1.08) contrast(1.02) brightness(0.94); }
   .hero-video-fireworks {
     filter: saturate(1.28) contrast(1.14) brightness(0.92) hue-rotate(-8deg);
     transform: scale(1.1);
@@ -198,6 +316,8 @@
   }
   .hero-ambient.a { width: 320px; height: 320px; top: -70px; left: -40px; background: rgba(181,255,90,0.18); }
   .hero-ambient.b { width: 280px; height: 280px; right: 8%; top: 14%; background: rgba(255,45,146,0.16); }
+  .hero.is-day .hero-ambient.a { background: rgba(255,255,255,0.26); }
+  .hero.is-day .hero-ambient.b { background: rgba(77,234,255,0.20); }
   .hero-grid {
     position: relative;
     z-index: 3;
@@ -262,6 +382,33 @@
     line-height: 1.65;
     text-shadow: 0 4px 18px rgba(0,0,0,0.35);
   }
+  .hero.is-day .hero-kicker,
+  .hero.is-day .hero-button-secondary,
+  .hero.is-day .hero-proof-card,
+  .hero.is-day .hero-panel,
+  .hero.is-day .hero-marquee,
+  .hero.is-day .hero-spotify-badge {
+    background: rgba(255,255,255,0.56);
+    border-color: rgba(7,16,8,0.08);
+    box-shadow: 0 18px 40px rgba(16,24,18,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+    color: #071008;
+  }
+  .hero.is-day .hero-title,
+  .hero.is-day .hero-proof-value,
+  .hero.is-day .hero-panel-value { color: #071008; text-shadow: 0 8px 24px rgba(255,255,255,0.32); }
+  .hero.is-day .hero-title .accent { color: #4f8d00; -webkit-text-fill-color: #4f8d00; text-shadow: none; }
+  .hero.is-day .hero-sub,
+  .hero.is-day .hero-proof-meta,
+  .hero.is-day .hero-panel-copy,
+  .hero.is-day .hero-panel-label,
+  .hero.is-day .hero-proof-label,
+  .hero.is-day .hero-marquee-track,
+  .hero.is-day .hero-kicker,
+  .hero.is-day .hero-button-secondary,
+  .hero.is-day .hero-spotify-badge { color: rgba(7,16,8,0.72); text-shadow: none; }
+  .hero.is-day .hero-panel-metric { background: rgba(7,16,8,0.04); border-color: rgba(7,16,8,0.06); }
+  .hero.is-day .hero-panel-metric-label { color: rgba(7,16,8,0.48); }
+  .hero.is-day .hero-panel-metric-value { color: #4f8d00; }
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
@@ -316,20 +463,22 @@
     gap: 8px;
     padding: 10px 14px;
     border-radius: 999px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.14);
-    color: rgba(255,255,255,0.88);
+    background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%);
+    border: 1px solid rgba(181,255,90,0.45);
+    color: #071008;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.02em;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 14px 30px rgba(181,255,90,0.18);
   }
   .hero-pill strong {
-    color: #B5FF5A;
+    color: #071008;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
     letter-spacing: 0.08em;
+    opacity: 0.7;
   }
   .hero-proof-row {
     display: grid;
@@ -489,6 +638,30 @@
     box-shadow: 0 24px 60px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.05);
   }
 
+  .filter-shell { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .filter-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .filter-toggle {
+    flex: 1 1 280px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(17,19,29,0.88) 0%, rgba(12,14,22,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+    text-align: left;
+  }
+  .filter-toggle-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .filter-toggle-label { font-size: 10px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(255,255,255,0.46); }
+  .filter-toggle-value { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.84); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .filter-toggle-icon { font-size: 16px; color: rgba(255,255,255,0.46); flex-shrink: 0; }
+  .filter-panel { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 16px; background: linear-gradient(180deg, rgba(17,19,29,0.88) 0%, rgba(12,14,22,0.9) 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .filter-panel > * { flex: 0 0 auto; }
+  .filter-panel .search { flex: 1 1 220px; min-width: 200px; }
+  .filter-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
   /* User picker */
   .user-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 0; padding: 14px 18px; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .user-picker-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: rgba(255,255,255,0.46); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
@@ -552,7 +725,7 @@
 
   /* Badges */
   .badge { display: inline-block; font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 999px; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
-  .badge-upcoming { background: rgba(74,138,0,0.12); color: #4A8A00; }
+  .badge-upcoming { background: #B5FF5A; color: #071008; }
   .badge-hot { background: rgba(255,170,0,0.12); color: #c47800; }
   .badge-past { background: rgba(0,0,0,0.06); color: #999; }
   .badge-cancelled { background: rgba(255,61,90,0.12); color: var(--red); }
@@ -658,19 +831,41 @@
     .tabs { padding: 10px 12px 12px; gap: 8px; flex-wrap: wrap; }
     .tab { padding: 10px 12px; font-size: 13px; }
 
-    /* Filter bar — search full width first, selects share row */
-    .filter-bar { gap: 6px; padding: 12px; border-radius: 18px; }
-    .filter-bar .search { order: -1; flex: 1 1 100%; min-width: 0; }
-    .filter-bar select { flex: 1 1 calc(33% - 4px); min-width: 0; width: auto; }
-    .filter-bar .primary-btn { flex: 1 1 100%; text-align: center; }
+    /* Filters */
+    .filter-shell { gap: 8px; margin-bottom: 14px; }
+    .filter-toolbar { gap: 8px; align-items: stretch; }
+    .filter-toggle, .filter-toolbar .primary-btn { width: 100%; }
+    .filter-toggle { padding: 12px 14px; border-radius: 18px; }
+    .filter-toggle-label { font-size: 9px; }
+    .filter-toggle-value { font-size: 12px; }
+    .filter-panel { gap: 8px; padding: 12px; border-radius: 18px; }
+    .filter-panel .search { order: -1; flex: 1 1 100%; min-width: 0; }
+    .filter-panel select { flex: 1 1 calc(33% - 6px); min-width: 0; width: auto; }
+    .filter-actions { width: 100%; }
+    .filter-actions .ghost-btn { flex: 1 1 100%; text-align: center; }
 
     /* Show card */
-    .show-card { padding: 12px 13px; }
-    .artist-photo { width: 110px; height: 110px; font-size: 28px; border-radius: 16px; }
+    .show-card { padding: 12px 13px; border-radius: 20px; }
+    .artist-row { flex-direction: column; gap: 12px; }
+    .artist-photo { width: 100%; height: 164px; font-size: 28px; border-radius: 18px; }
+    .show-card-body { width: 100%; }
+    .show-card-main { gap: 10px; }
     .show-title { font-size: 15px; }
     .show-meta { font-size: 10px; }
+    .show-card-top { gap: 6px; }
+    .venue-link { margin-top: 8px; max-width: 100%; }
+    .show-note { font-size: 11px; margin-top: 7px; }
+    .going-stat { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 10px 12px; border-radius: 14px; }
     .going-stat-value { font-size: 22px; }
     .going-stat-label { font-size: 9px; }
+    .chips { gap: 8px; }
+    .chip { max-width: 100%; min-height: 34px; }
+    .show-ticket-links { margin-top: 12px; align-items: stretch; gap: 8px; }
+    .get-tickets-btn { width: 100%; justify-content: space-between; padding: 10px 12px; min-height: 42px; }
+    .show-card-footer { flex-direction: column; align-items: stretch; gap: 10px; }
+    .show-card-admin { width: 100%; justify-content: space-between; }
+    .reactions { gap: 8px; align-items: stretch; }
+    .react-btn, .media-btn { min-height: 36px; }
 
     /* Stat grid */
     .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -688,9 +883,8 @@
     .friend-header-row > div:last-child { width: 100%; }
     .friend-header-row > div:last-child select { flex: 1; }
     .profile-preview, .profile-card { flex-direction: column; }
-    .leaderboard-row, .show-card-footer, .friend-page-header { align-items: flex-start; }
+    .leaderboard-row, .friend-page-header { align-items: flex-start; }
     .show-card-main { flex-direction: column; }
-    .show-ticket-links { align-items: stretch; }
     .leaderboard-score { text-align: left; }
   }
 
@@ -799,8 +993,8 @@
   .user-picker-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
   .user-picker-edit { font-size: 11px; color: rgba(255,255,255,0.54); background: none; border: none; cursor: pointer; padding: 0 4px; text-decoration: underline; }
   .user-picker-edit:hover { color: #fff; }
-  .user-picker-new { font-size: 11px; color: #B5FF5A; background: none; border: 1px solid rgba(181,255,90,0.18); cursor: pointer; padding: 5px 10px; border-radius: 999px; background: rgba(181,255,90,0.08); font-weight: 700; }
-  .user-picker-new:hover { background: rgba(181,255,90,0.14); }
+  .user-picker-new { font-size: 11px; color: #071008; background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%); border: 1px solid rgba(181,255,90,0.34); cursor: pointer; padding: 5px 10px; border-radius: 999px; font-weight: 700; box-shadow: 0 10px 24px rgba(181,255,90,0.16); }
+  .user-picker-new:hover { background: linear-gradient(135deg, #a8f048 0%, #cbed7b 100%); }
   .profile-card { background: linear-gradient(180deg, rgba(18,21,31,0.92) 0%, rgba(11,13,21,0.94) 100%); border-radius: 22px; padding: 20px; margin-bottom: 20px; box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04); display: flex; align-items: flex-start; gap: 16px; border: 1px solid rgba(255,255,255,0.08); }
   .profile-card-info { flex: 1; min-width: 0; }
   .profile-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; }
@@ -965,11 +1159,20 @@ function App() {
   const { show: showToast, toastEl } = useToast();
 
   // Night mode: null = auto (time-based), true = forced night, false = forced day
-  const [nightOverride, setNightOverride] = useState(null);
+  const [nightOverride, setNightOverride] = useState(() => {
+    const saved = localStorage.getItem('nightOverride');
+    if (saved === 'night') return true;
+    if (saved === 'day') return false;
+    return null;
+  });
+  useEffect(() => {
+    if (nightOverride === null) localStorage.removeItem('nightOverride');
+    else localStorage.setItem('nightOverride', nightOverride ? 'night' : 'day');
+  }, [nightOverride]);
   useEffect(() => {
     function isNightEST() {
       const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
-      return true; // always dark
+      return h >= 19 || h < 7;
     }
     const apply = () => {
       const night = nightOverride !== null ? nightOverride : isNightEST();
@@ -1307,15 +1510,16 @@ function App() {
       totals,
       nextShow,
       currentUser,
+      isNight,
       onOpenShows: () => setTab('shows'),
       onOpenMyTickets: () => setTab('friend'),
     }),
     // Night mode toggle (fixed top-right)
     h('button', {
-      onClick: () => setNightOverride(prev => prev === null ? !isNight : !prev),
-      title: isNight ? 'Switch to day mode' : 'Switch to night mode',
+      onClick: () => setNightOverride(prev => prev === null ? !isNight : prev === true ? false : null),
+      title: nightOverride === null ? (isNight ? 'Auto mode, tap for day mode' : 'Auto mode, tap for night mode') : nightOverride ? 'Night mode, tap for day mode' : 'Day mode, tap to return to auto',
       style: { position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: 14, zIndex: 50, width: 34, height: 34, borderRadius: '50%', background: isNight ? '#2a2a3a' : 'rgba(255,255,255,0.9)', border: isNight ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)', fontSize: 16, lineHeight: '34px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', cursor: 'pointer', backdropFilter: 'blur(6px)' }
-    }, isNight ? '☀️' : '🌙'),
+    }, nightOverride === null ? (isNight ? '☀️' : '🌙') : nightOverride ? '☀️' : '↺'),
     // White header panel: user-picker + roster + tabs (no event list inside)
     h('div', { className: 'top-shell' },
       // User picker
@@ -1488,7 +1692,7 @@ function App() {
 }
 
 // ===== Hero =====
-function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
+function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTickets }) {
   const marqueeItems = [
     'Real-time crew tracking',
     'Ticket intel',
@@ -1497,10 +1701,12 @@ function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
     'Lineup memory',
     'Party logistics',
   ];
-  const baseVideo = 'https://assets.mixkit.co/videos/4026/4026-720.mp4';
-  const fireworksVideo = 'https://assets.mixkit.co/videos/4157/4157-720.mp4';
+  const baseVideo = isNight
+    ? 'https://assets.mixkit.co/videos/48504/48504-720.mp4'
+    : 'https://assets.mixkit.co/videos/17631/17631-720.mp4';
+  const fireworksVideo = isNight ? 'https://assets.mixkit.co/videos/4157/4157-720.mp4' : null;
   const userFirstName = currentUser?.name?.split(' ')[0] || 'My';
-  return h('div', { className: 'hero' },
+  return h('div', { className: 'hero ' + (isNight ? 'is-night' : 'is-day') },
     h('video', {
       className: 'hero-video hero-video-base',
       autoPlay: true,
@@ -1513,7 +1719,7 @@ function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
       h('source', { src: baseVideo, type: 'video/mp4' }),
       h('source', { src: 'hero-header-video.mp4', type: 'video/mp4' })
     ),
-    h('video', {
+    fireworksVideo && h('video', {
       className: 'hero-video hero-video-fireworks',
       autoPlay: true,
       muted: true,
@@ -1543,9 +1749,11 @@ function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
           'Soccer Raves Show Log · private crew board'
         ),
         h('h1', { className: 'hero-title' },
-          'The season doesn’t end at full time. ', h('span', { className: 'accent' }, 'It turns into a rave.')
+          isNight ? 'The season doesn’t end at full time. ' : 'From matchday to Miami sun. ', h('span', { className: 'accent' }, isNight ? 'It turns into a rave.' : 'Then it flips after dark.')
         ),
-        h('p', { className: 'hero-sub' }, 'A cinematic home base for the nights that matter, who is already in, who still needs tickets, and which shows are turning into core memories before the group chat catches up.'),
+        h('p', { className: 'hero-sub' }, isNight
+          ? 'An after-hours control room for the nights that matter, who is already in, who still needs tickets, and which shows are becoming core memories before the group chat catches up.'
+          : 'A bright daytime board for planning the next one, locking the crew, and figuring out which shows deserve a hard pivot from the pitch to the festival gates.'),
         h('div', { className: 'hero-actions' },
           h('button', { className: 'hero-button hero-button-primary', onClick: onOpenShows },
             h('span', null, 'Enter the board'),
@@ -1589,7 +1797,9 @@ function Hero({ totals, nextShow, currentUser, onOpenShows, onOpenMyTickets }) {
       h('div', { className: 'hero-panel' },
         h('div', { className: 'hero-panel-label' }, 'Tonight\'s signal'),
         h('div', { className: 'hero-panel-value' }, `${totals.upcoming} shows on the radar`),
-        h('p', { className: 'hero-panel-copy' }, 'Built to feel like a premium invite, not a spreadsheet. Dark, immediate, and sharp enough to make the first scroll feel like doors opening.'),
+        h('p', { className: 'hero-panel-copy' }, isNight
+          ? 'Built to feel like a premium invite, not a spreadsheet. Dark, immediate, and sharp enough to make the first scroll feel like doors opening.'
+          : 'Light mode is back for daytime planning, with a cleaner board that still feels premium on iPhone before the night version takes over.'),
         h('div', { className: 'hero-panel-metrics' },
           h('div', { className: 'hero-panel-metric' },
             h('div', { className: 'hero-panel-metric-label' }, 'Friends'),
@@ -1715,36 +1925,65 @@ function VisitLog({ visits, friends }) {
 
 function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
+  const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' ? true : window.innerWidth > 820);
   const venues = useMemo(() => {
     const set = new Set((allShows || []).filter(s => !s.past).map(s => s.venue).filter(Boolean));
     return [...set].sort();
   }, [allShows]);
+  const activeFilterCount = [
+    filter.year !== 'all',
+    filter.status !== 'upcoming',
+    filter.venue !== 'all',
+    Boolean(filter.search.trim()),
+  ].filter(Boolean).length;
+  const filterSummary = [
+    filter.status === 'upcoming' ? 'Upcoming first' : filter.status === 'past' ? 'Past only' : 'All shows',
+    filter.venue !== 'all' ? filter.venue : null,
+    filter.search.trim() ? 'Search on' : null,
+  ].filter(Boolean).join(' · ');
 
   return h('div', null,
-    h('div', { className: 'filter-bar' },
-      h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
-        h('option', { value: 'all' }, 'All years'),
-        h('option', { value: '2026' }, '2026'),
-        h('option', { value: '2025' }, '2025'),
-        h('option', { value: '2024' }, '2024'),
+    h('div', { className: 'filter-shell' },
+      h('div', { className: 'filter-toolbar' },
+        h('button', {
+          className: 'filter-toggle',
+          onClick: () => setFiltersOpen((open) => !open),
+          'aria-expanded': filtersOpen,
+        },
+          h('div', { className: 'filter-toggle-meta' },
+            h('div', { className: 'filter-toggle-label' }, activeFilterCount ? `${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active` : 'Filters'),
+            h('div', { className: 'filter-toggle-value' }, filterSummary)
+          ),
+          h('div', { className: 'filter-toggle-icon' }, filtersOpen ? '−' : '+')
+        ),
+        h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show')
       ),
-      h('select', { value: filter.status, onChange: (e) => setFilter({ ...filter, status: e.target.value }), style: { width: 'auto' } },
-        h('option', { value: 'all' }, 'All shows'),
-        h('option', { value: 'upcoming' }, 'Upcoming only'),
-        h('option', { value: 'past' }, 'Past only'),
-      ),
-      h('select', { value: filter.venue, onChange: (e) => setFilter({ ...filter, venue: e.target.value }), style: { width: 'auto' } },
-        h('option', { value: 'all' }, 'All venues'),
-        venues.map(v => h('option', { key: v, value: v }, v)),
-      ),
-      h('input', {
-        className: 'search', type: 'text', placeholder: 'Search artist or venue...',
-        value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
-      }),
-      h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
-      isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet' }, '↥ Import'),
-      isAdmin && h('button', { className: 'ghost-btn', onClick: onRefreshImages, title: 'Re-fetch artist images for shows that are missing one' }, '↻ Refresh images'),
-      h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show'),
+      filtersOpen && h('div', { className: 'filter-panel' },
+        h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
+          h('option', { value: 'all' }, 'All years'),
+          h('option', { value: '2026' }, '2026'),
+          h('option', { value: '2025' }, '2025'),
+          h('option', { value: '2024' }, '2024'),
+        ),
+        h('select', { value: filter.status, onChange: (e) => setFilter({ ...filter, status: e.target.value }), style: { width: 'auto' } },
+          h('option', { value: 'all' }, 'All shows'),
+          h('option', { value: 'upcoming' }, 'Upcoming only'),
+          h('option', { value: 'past' }, 'Past only'),
+        ),
+        h('select', { value: filter.venue, onChange: (e) => setFilter({ ...filter, venue: e.target.value }), style: { width: 'auto' } },
+          h('option', { value: 'all' }, 'All venues'),
+          venues.map(v => h('option', { key: v, value: v }, v)),
+        ),
+        h('input', {
+          className: 'search', type: 'text', placeholder: 'Search artist or venue...',
+          value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
+        }),
+        h('div', { className: 'filter-actions' },
+          h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
+          isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet' }, '↥ Import'),
+          isAdmin && h('button', { className: 'ghost-btn', onClick: onRefreshImages, title: 'Re-fetch artist images for shows that are missing one' }, '↻ Refresh images')
+        )
+      )
     ),
     !currentUser && h('div', { className: 'notice-banner' },
       '↑ Pick your name (top right) to add tickets or react to shows'
