@@ -2255,7 +2255,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
     // Ticket buttons
     !show.past && h('div', {
       className: 'show-ticket-links',
-      style: { order: 10, alignSelf: 'flex-end', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginTop: 8, width: 'auto' },
+      style: { alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginTop: 8, marginBottom: 8, width: 'auto' },
     },
       h('a', {
         className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
