@@ -1749,10 +1749,8 @@ function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTic
     'Lineup memory',
     'Party logistics',
   ];
-  const baseVideo = isNight
-    ? 'https://assets.mixkit.co/videos/48507/48507-720.mp4'
-    : 'https://assets.mixkit.co/videos/15997/15997-720.mp4';
-  const fireworksVideo = isNight ? 'https://assets.mixkit.co/videos/4157/4157-720.mp4' : null;
+  const baseVideo = 'hero-background-video.mp4';
+  const fireworksVideo = null;
   const userFirstName = currentUser?.name?.split(' ')[0] || 'My';
   return h('div', { className: 'hero ' + (isNight ? 'is-night' : 'is-day') },
     h('video', {
