@@ -1828,13 +1828,7 @@ function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTic
     ),
     h('div', { className: 'hero-grid' },
       h('div', { className: 'hero-content' },
-        h('div', { className: 'hero-kicker' },
-          h('span', { className: 'hero-kicker-dot' }),
-          'Soccer Raves Show Log · private crew board'
-        ),
-        h('h1', { className: 'hero-title' },
-          isNight ? 'The season doesn’t end at full time. ' : 'From matchday to Miami sun. ', h('span', { className: 'accent' }, isNight ? 'It turns into a rave.' : 'Then it flips after dark.')
-        ),
+        h('h1', { className: 'hero-title' }, 'Soccer Raves'),
         h('p', { className: 'hero-sub' }, isNight
           ? 'An after-hours control room for the nights that matter, who is already in, who still needs tickets, and which shows are becoming core memories before the group chat catches up.'
           : 'A bright daytime board for planning the next one, locking the crew, and figuring out which shows deserve a hard pivot from the pitch to the festival gates.'),
