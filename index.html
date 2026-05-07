@@ -731,7 +731,7 @@
   .show-card .going-stat-wrap { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 5 !important; align-items: flex-end !important; margin: 0 !important; }
   .going-stat-value { line-height: 1; }
   /* Ticket links: bottom-right of every show card, compact */
-  .show-card .show-ticket-links { order: 10; align-self: flex-end !important; flex-direction: row !important; flex-wrap: wrap; justify-content: flex-end !important; align-items: center !important; gap: 6px !important; width: auto !important; max-width: 100%; margin-top: 8px; }
+  .show-card .show-ticket-links { align-self: flex-end !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; width: auto !important; max-width: 100%; margin-top: 8px; }
   .show-card .show-ticket-links .get-tickets-btn { width: auto !important; flex: 0 0 auto !important; justify-content: center !important; padding: 5px 10px !important; min-height: 26px !important; height: 26px; border-radius: 999px !important; font-size: 11px !important; gap: 5px !important; white-space: nowrap; }
   .show-card .show-ticket-links .get-tickets-btn img { width: 12px !important; height: 12px !important; }
   .show-card .show-ticket-links .get-tickets-price { font-size: 10px; opacity: 0.7; }
@@ -904,8 +904,8 @@
     .chips { gap: 8px; margin-top: 12px; }
     .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
     .chip-count { padding: 2px 6px; }
-    .show-card-footer { flex-direction: column; align-items: stretch; gap: 10px; }
-    .show-card-footer .ghost-btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .show-card-footer { flex-direction: column; align-items: center; gap: 10px; }
+    .show-card-footer .show-card-add-tickets { width: 60%; min-height: 40px; padding: 8px 14px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; align-self: center; }
     .show-card-admin { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .show-card-admin .text-action { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
     .reactions { gap: 8px; align-items: stretch; }
@@ -2278,8 +2278,12 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
       )
     ),
-    // Bottom row: edit/delete first, then + Add tickets so it sits at the very bottom of the card
+    // Bottom row: Add tickets (compact, centered) first, edit/delete at the very bottom of the card
     h('div', { className: 'show-card-footer' },
+      h('button', {
+        className: 'ghost-btn show-card-add-tickets',
+        onClick: () => onAddTickets && onAddTickets(show.id),
+      }, '+ Add tickets'),
       currentUser && h('div', { className: 'show-card-admin' },
         h('button', {
           onClick: () => onEditShow(show.id),
@@ -2290,11 +2294,6 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           className: 'text-action'
         }, 'delete')
       ),
-      h('button', {
-        className: 'ghost-btn',
-        style: { fontSize: 12, padding: '6px 12px' },
-        onClick: () => onAddTickets && onAddTickets(show.id),
-      }, '+ Add tickets'),
     ),
   );
 }
