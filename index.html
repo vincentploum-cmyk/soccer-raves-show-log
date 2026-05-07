@@ -842,12 +842,14 @@
 
     /* Shell + tabs */
     .top-shell { border-radius: 24px; margin-bottom: 14px; background: linear-gradient(180deg, rgba(14,18,28,0.84) 0%, rgba(10,13,20,0.92) 100%); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    .user-picker { padding: 12px 12px 10px; gap: 10px; flex-wrap: wrap; }
-    .user-picker-main { width: 100%; }
-    .user-picker-avatar { width: 32px; height: 32px; }
-    .user-picker select { flex: 1; min-width: 0; min-height: 42px; }
-    .user-picker-actions { width: 100%; margin-left: 0; }
-    .user-picker-edit, .user-picker-new { min-height: 36px; display: inline-flex; align-items: center; }
+    .user-picker { padding: 10px 12px; gap: 8px; flex-wrap: nowrap; align-items: center; }
+    .user-picker-main { width: auto; flex: 1; min-width: 0; gap: 8px; }
+    .user-picker-avatar { width: 28px; height: 28px; }
+    .user-picker-label { font-size: 9px; }
+    .user-picker select { flex: 0 1 auto; width: auto; max-width: 180px; min-height: 32px; padding: 6px 28px 6px 12px; font-size: 13px; border-radius: 999px; }
+    .user-picker-actions { width: auto; margin-left: 0; flex-shrink: 0; }
+    .user-picker-edit { padding: 0 6px; font-size: 11px; min-height: 32px; display: inline-flex; align-items: center; }
+    .user-picker-new { min-height: 32px; padding: 4px 10px; font-size: 11px; display: inline-flex; align-items: center; }
     .tabs { padding: 8px 12px 12px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { padding: 10px 14px; font-size: 13px; min-height: 40px; flex: 0 0 auto; border-radius: 16px; }
