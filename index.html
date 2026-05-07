@@ -268,10 +268,7 @@
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(4,5,10,0.16) 0%, rgba(4,5,10,0.48) 32%, rgba(4,5,10,0.82) 100%),
-      linear-gradient(115deg, rgba(181,255,90,0.18) 0%, transparent 28%),
-      linear-gradient(300deg, rgba(255,45,146,0.22) 0%, transparent 32%),
-      radial-gradient(circle at 20% 22%, rgba(97,195,255,0.16), transparent 20%);
+      linear-gradient(180deg, rgba(4,5,10,0) 0%, rgba(4,5,10,0.10) 38%, rgba(4,5,10,0.62) 100%);
     z-index: 1;
     pointer-events: none;
   }
@@ -335,18 +332,7 @@
     position: relative;
     max-width: 760px;
   }
-  .hero.is-day .hero-content::before {
-    content: "";
-    position: absolute;
-    inset: -18px -18px -18px -16px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(11,14,18,0.44) 0%, rgba(8,10,14,0.78) 100%);
-    border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 22px 48px rgba(0,0,0,0.22);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: -1;
-  }
+  .hero.is-day .hero-content::before { content: none; }
   .hero-kicker {
     display: inline-flex;
     align-items: center;
@@ -829,28 +815,17 @@
     #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px calc(env(safe-area-inset-bottom, 0px) + 76px); }
 
     /* Hero */
-    .hero { min-height: 76svh; border-radius: 28px; box-shadow: 0 26px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.06); }
+    .hero { min-height: 64svh; border-radius: 28px; box-shadow: 0 26px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.06); }
     .hero::after { inset: 8px; border-radius: 22px; border-color: rgba(255,255,255,0.12); }
-    .hero-grid { padding: 76px 14px 14px; gap: 12px; align-content: end; }
-    .hero-content::before { content: ""; position: absolute; inset: -10px -10px -10px -10px; border-radius: 24px; background: linear-gradient(180deg, rgba(10,12,18,0.36) 0%, rgba(7,9,14,0.80) 100%); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 22px 40px rgba(0,0,0,0.24); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); z-index: -1; }
-    .hero.is-day .hero-content::before { background: linear-gradient(180deg, rgba(12,15,20,0.42) 0%, rgba(8,10,14,0.82) 100%); border-color: rgba(255,255,255,0.12); }
+    .hero-grid { padding: 76px 18px 22px; gap: 12px; align-content: end; grid-template-columns: 1fr; }
+    .hero-content::before { content: none; }
     .hero-content { max-width: 100%; }
-    .hero-kicker { margin-bottom: 10px; font-size: 9px; padding: 7px 11px; background: rgba(255,255,255,0.08); }
-    .hero-title { font-size: clamp(26px, 11.5vw, 40px); max-width: 7ch; }
+    .hero-kicker { margin-bottom: 10px; font-size: 9px; padding: 7px 11px; background: rgba(255,255,255,0.10); }
+    .hero-title { font-size: clamp(26px, 11.5vw, 40px); max-width: 9ch; }
     .hero-sub { font-size: 13px; margin-top: 12px; line-height: 1.45; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .hero-actions { margin-top: 16px; gap: 8px; }
     .hero-button { width: 100%; justify-content: space-between; padding: 12px 14px; font-size: 13px; min-height: 52px; border-radius: 18px; }
-    .hero-proof-row { display: none; }
-    .hero-cta-row { display: none; }
-    .hero-marquee { display: none; }
-    .hero-panel { padding: 12px; border-radius: 22px; width: 100%; background: rgba(8,10,14,0.62); border: 1px solid rgba(255,255,255,0.10); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    .hero-panel-label { font-size: 10px; }
-    .hero-panel-value { margin-top: 8px; font-size: clamp(28px, 9vw, 38px); }
-    .hero-panel-copy { display: none; }
-    .hero-panel-metrics { gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .hero-panel-metric { padding: 10px 8px 9px; border-radius: 16px; background: rgba(255,255,255,0.06); }
-    .hero-panel-metric-label { font-size: 9px; }
-    .hero-panel-metric-value { font-size: 18px; }
+    .hero-proof-row, .hero-cta-row, .hero-marquee, .hero-panel { display: none; }
     .hero-spotify-badge { display: inline-flex; top: 12px; right: 12px; font-size: 8px; padding: 6px 9px 6px 8px; max-width: calc(100% - 24px); background: rgba(7,9,14,0.62); }
 
 
@@ -886,26 +861,31 @@
     .filter-toggle, .filter-toolbar .primary-btn, .filter-actions .ghost-btn { min-height: 44px; }
 
     /* Show card */
-    .show-card { padding: 10px 10px 12px; border-radius: 20px; }
-    .artist-row { flex-direction: column; gap: 12px; }
-    .artist-photo { width: 100%; height: 142px; font-size: 28px; border-radius: 18px; }
+    .show-card { padding: 12px 12px 14px; border-radius: 22px; }
+    .artist-row { flex-direction: column; gap: 12px; position: relative; }
+    .artist-photo { width: 100%; height: 168px; font-size: 28px; border-radius: 18px; }
     .show-card-body { width: 100%; display: flex; flex-direction: column; gap: 10px; }
     .show-card-main { gap: 12px; }
-    .show-title { font-size: 16px; }
+    .show-title { font-size: 17px; color: var(--text); }
     .show-meta { font-size: 10px; }
     .show-card-top > span:first-child { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); }
     .show-card-top { gap: 6px; }
     .venue-link { margin-top: 8px; max-width: 100%; }
     .show-note { font-size: 11px; margin-top: 7px; }
-    .going-stat { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 9px 10px; border-radius: 14px; }
-    .going-stat-value { font-size: 22px; }
-    .going-stat-label { font-size: 9px; }
+    /* Going stat -> floats over artist photo, top-right */
+    .show-card-main > div:last-child { position: absolute; top: 10px; right: 10px; z-index: 3; align-items: flex-end !important; }
+    .going-stat { width: auto; flex-direction: row; align-items: center; justify-content: flex-end; text-align: right; gap: 6px; padding: 6px 10px; border-radius: 999px; background: rgba(7,9,14,0.72) !important; border: 1px solid rgba(181,255,90,0.35) !important; box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 0 14px rgba(181,255,90,0.18) !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .going-stat-value { font-size: 15px; line-height: 1; margin: 0; }
+    .going-stat-label { font-size: 9px; color: rgba(255,255,255,0.78) !important; }
+    .going-stat-label:last-child { display: none; }
     .chips { gap: 8px; margin-top: 12px; }
     .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
     .chip-count { padding: 2px 6px; }
-    .show-ticket-links { margin-top: 10px; align-items: stretch; gap: 8px; }
-    .get-tickets-btn { width: 100%; justify-content: space-between; padding: 10px 12px; min-height: 44px; border-radius: 14px; font-size: 12px; }
-    .get-tickets-price { font-size: 10px; }
+    /* Ticket pills -> small, right-aligned row */
+    .show-ticket-links { margin-top: 10px; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+    .get-tickets-btn { width: auto; justify-content: center; padding: 6px 11px; min-height: 30px; border-radius: 999px; font-size: 11px; gap: 5px; background: rgba(7,9,14,0.72) !important; color: rgba(255,255,255,0.92) !important; border: 1px solid rgba(255,255,255,0.16) !important; box-shadow: none !important; }
+    .get-tickets-btn img { width: 12px; height: 12px; }
+    .get-tickets-price { font-size: 10px; opacity: 0.78; }
     .show-card-footer { flex-direction: column; align-items: stretch; gap: 10px; }
     .show-card-footer .ghost-btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
     .show-card-admin { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -937,8 +917,69 @@
   @media (max-width: 380px) {
     .hero-title { font-size: clamp(34px, 13vw, 52px); }
     .artist-row { gap: 10px; }
-    .going-stat-value { font-size: 18px; }
+    .going-stat-value { font-size: 14px; }
   }
+
+  /* ===== Sticky bottom nav (iOS-style) ===== */
+  .mobile-bottom-nav { display: none; }
+  @media (max-width: 768px) {
+    .mobile-bottom-nav {
+      display: flex;
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+      z-index: 60;
+      padding: 6px;
+      gap: 4px;
+      background: rgba(10,12,18,0.78);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 22px;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter: blur(22px) saturate(1.4);
+      -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    }
+    .mb-tab {
+      flex: 1;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 6px 7px;
+      border-radius: 16px;
+      background: transparent;
+      color: rgba(255,255,255,0.62);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      min-height: 48px;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+    }
+    .mb-tab .mb-icon { font-size: 17px; line-height: 1; }
+    .mb-tab .mb-label { font-size: 9px; line-height: 1; }
+    .mb-tab.active { background: linear-gradient(180deg, rgba(181,255,90,0.22) 0%, rgba(181,255,90,0.10) 100%); color: #B5FF5A; box-shadow: inset 0 0 0 1px rgba(181,255,90,0.28); }
+    .mb-tab:active { transform: scale(0.96); }
+    /* Hide top tabs on mobile — bottom nav replaces them */
+    .top-shell .tabs { display: none; }
+    /* Reserve room above the bottom nav */
+    #root { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px) !important; }
+  }
+  html:not(.night) .mobile-bottom-nav { background: rgba(255,255,255,0.86); border-color: rgba(7,16,8,0.10); box-shadow: 0 18px 40px rgba(16,24,18,0.14), inset 0 1px 0 rgba(255,255,255,0.7); }
+  html:not(.night) .mb-tab { color: rgba(7,16,8,0.58); }
+  html:not(.night) .mb-tab.active { background: linear-gradient(180deg, #d6ff8a 0%, #B5FF5A 100%); color: #1a2a05; box-shadow: 0 4px 14px rgba(141,211,39,0.32); }
+
+  /* ===== Day-mode card readability ===== */
+  html:not(.night) .show-card { color: #071008; }
+  html:not(.night) .show-title { color: #071008 !important; }
+  html:not(.night) .show-meta { color: #4f8d00 !important; }
+  html:not(.night) .show-note { color: rgba(7,16,8,0.66); }
+  html:not(.night) .venue-link { color: rgba(7,16,8,0.78); background: rgba(7,16,8,0.05); border-color: rgba(7,16,8,0.10); }
+  html:not(.night) .going-stat { background: rgba(7,9,14,0.78) !important; border: 1px solid rgba(181,255,90,0.45) !important; }
+  html:not(.night) .going-stat-label { color: rgba(255,255,255,0.78) !important; }
+  html:not(.night) .going-stat-value { color: #B5FF5A !important; -webkit-text-fill-color: #B5FF5A !important; }
+  html:not(.night) .get-tickets-btn { background: rgba(7,9,14,0.85) !important; color: rgba(255,255,255,0.94) !important; border: 1px solid rgba(255,255,255,0.14) !important; }
   .stat-card { background: linear-gradient(180deg, rgba(18,21,31,0.92) 0%, rgba(11,13,21,0.94) 100%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 16px 18px; position: relative; overflow: hidden; box-shadow: 0 18px 40px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.04); }
   .stat-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .stat-1::before { background: var(--purple); }
@@ -1735,6 +1776,20 @@ function App() {
       },
       onNew: () => { setShowWelcomeModal(false); setProfileTarget(false); },
     }),
+    h('nav', { className: 'mobile-bottom-nav', 'aria-label': 'Primary' },
+      h('button', { className: 'mb-tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') },
+        h('span', { className: 'mb-icon' }, '◎'),
+        h('span', { className: 'mb-label' }, 'Shows')
+      ),
+      h('button', { className: 'mb-tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') },
+        h('span', { className: 'mb-icon' }, '✦'),
+        h('span', { className: 'mb-label' }, 'Mine')
+      ),
+      h('button', { className: 'mb-tab' + (tab === 'leaderboard' ? ' active' : ''), onClick: () => setTab('leaderboard') },
+        h('span', { className: 'mb-icon' }, '♚'),
+        h('span', { className: 'mb-label' }, 'Board')
+      ),
+    ),
     toastEl,
   );
 }
@@ -1840,31 +1895,6 @@ function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTic
           )
         )
       ),
-      h('div', { className: 'hero-panel' },
-        h('div', { className: 'hero-panel-label' }, 'Tonight\'s signal'),
-        h('div', { className: 'hero-panel-value' }, `${totals.upcoming} shows on the radar`),
-        h('p', { className: 'hero-panel-copy' }, isNight
-          ? 'Built to feel like a premium invite, not a spreadsheet. Dark, immediate, and sharp enough to make the first scroll feel like doors opening.'
-          : 'Light mode is back for daytime planning, with a cleaner board that still feels premium on iPhone before the night version takes over.'),
-        h('div', { className: 'hero-panel-metrics' },
-          h('div', { className: 'hero-panel-metric' },
-            h('div', { className: 'hero-panel-metric-label' }, 'Friends'),
-            h('div', { className: 'hero-panel-metric-value' }, totals.friends)
-          ),
-          h('div', { className: 'hero-panel-metric' },
-            h('div', { className: 'hero-panel-metric-label' }, 'Tickets'),
-            h('div', { className: 'hero-panel-metric-value' }, totals.tickets)
-          ),
-          h('div', { className: 'hero-panel-metric' },
-            h('div', { className: 'hero-panel-metric-label' }, 'This year'),
-            h('div', { className: 'hero-panel-metric-value' }, totals.year)
-          ),
-          h('div', { className: 'hero-panel-metric' },
-            h('div', { className: 'hero-panel-metric-label' }, 'Energy'),
-            h('div', { className: 'hero-panel-metric-value' }, 'A++')
-          ),
-        )
-      )
     )
   );
 }
