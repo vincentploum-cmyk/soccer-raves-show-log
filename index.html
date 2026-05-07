@@ -1461,8 +1461,8 @@ function App() {
     return true;
   };
 
-  const setTicketCount = async (showId, friendId, count, actorId, isPrivate) => {
-    if (count === 0) {
+  const setTicketCount = async (showId, friendId, count, actorId, isPrivate, { removeOnZero = true } = {}) => {
+    if (count === 0 && removeOnZero) {
       // Delete by composite key so a stale local cache (missing the row) still
       // clears any server-side row that exists.
       const { error } = await sb.from('tickets').delete().eq('show_id', showId).eq('friend_id', friendId);
@@ -1704,7 +1704,7 @@ function App() {
       friends, shows: showsEnriched, currentUser,
       onClose: () => setAddTicketsModal(null),
       onSave: async (showId, friendId, count, isPrivate) => {
-        await setTicketCount(showId, friendId, count, currentUser?.id || friendId, isPrivate);
+        await setTicketCount(showId, friendId, count, currentUser?.id || friendId, isPrivate, { removeOnZero: false });
         setAddTicketsModal(null);
       },
     }),
@@ -3361,7 +3361,7 @@ function AddTicketsModal({ friendId, showId, friends, shows, currentUser, onClos
   const allShows = [...shows].filter(s => !s.past).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const [selFriendId, setSelFriendId] = useState(friendId || currentUser?.id || friends[0]?.id);
   const [selShowId, setSelShowId] = useState(showId ?? allShows[0]?.id ?? null);
-  const [count, setCount] = useState(1);
+  const [count, setCount] = useState(0);
   const [isPrivate, setIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const selFriend = friends.find(f => f.id === selFriendId);
