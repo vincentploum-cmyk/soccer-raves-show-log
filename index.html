@@ -257,10 +257,10 @@
   }
   .hero.is-day::before {
     background:
-      linear-gradient(180deg, rgba(248,251,255,0.12) 0%, rgba(245,249,255,0.24) 24%, rgba(240,246,250,0.68) 72%, rgba(237,244,247,0.94) 100%),
-      linear-gradient(115deg, rgba(181,255,90,0.18) 0%, transparent 28%),
-      linear-gradient(300deg, rgba(77,234,255,0.18) 0%, transparent 32%),
-      radial-gradient(circle at 18% 20%, rgba(255,255,255,0.24), transparent 20%);
+      linear-gradient(180deg, rgba(250,252,255,0.06) 0%, rgba(246,250,255,0.16) 24%, rgba(242,247,250,0.50) 72%, rgba(238,245,248,0.82) 100%),
+      linear-gradient(115deg, rgba(181,255,90,0.12) 0%, transparent 28%),
+      linear-gradient(300deg, rgba(77,234,255,0.12) 0%, transparent 32%),
+      radial-gradient(circle at 18% 20%, rgba(255,255,255,0.14), transparent 20%);
   }
   .hero.is-day::after { border-color: rgba(255,255,255,0.44); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.24); }
   .hero::before {
@@ -295,16 +295,16 @@
     z-index: 0;
   }
   .hero-video-base {
-    filter: saturate(1.12) contrast(1.08) brightness(0.72);
-    transform: scale(1.05);
+    filter: saturate(1.08) contrast(1.1) brightness(0.8);
+    transform: scale(1.02);
     object-position: center center;
   }
-  .hero.is-day .hero-video-base { filter: saturate(1.08) contrast(1.02) brightness(0.94); }
+  .hero.is-day .hero-video-base { filter: saturate(1.06) contrast(1.08) brightness(0.98); transform: scale(1.01); object-position: center 28%; }
   .hero-video-fireworks {
     filter: saturate(1.28) contrast(1.14) brightness(0.92) hue-rotate(-8deg);
-    transform: scale(1.1);
+    transform: scale(1.05);
     mix-blend-mode: screen;
-    opacity: 0.42;
+    opacity: 0.3;
     object-position: center top;
   }
   .hero-ambient {
@@ -1728,8 +1728,8 @@ function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTic
     'Party logistics',
   ];
   const baseVideo = isNight
-    ? 'https://assets.mixkit.co/videos/48504/48504-720.mp4'
-    : 'https://assets.mixkit.co/videos/17631/17631-720.mp4';
+    ? 'https://assets.mixkit.co/videos/48507/48507-720.mp4'
+    : 'https://assets.mixkit.co/videos/15997/15997-720.mp4';
   const fireworksVideo = isNight ? 'https://assets.mixkit.co/videos/4157/4157-720.mp4' : null;
   const userFirstName = currentUser?.name?.split(' ')[0] || 'My';
   return h('div', { className: 'hero ' + (isNight ? 'is-night' : 'is-day') },
