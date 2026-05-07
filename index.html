@@ -94,7 +94,7 @@
   html.night .empty-state h3 { color: var(--text-2); }
   html.night .bg-pattern .lasers { mix-blend-mode: screen; opacity: 0.45; }
   html.night body::before { background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px); }
-  html.night .hero { border-color: rgba(181,255,90,0.7) !important; box-shadow: 6px 6px 0 rgba(181,255,90,0.5), 0 0 40px rgba(181,255,90,0.08) !important; }
+  html.night .hero { border: none !important; box-shadow: none !important; }
   html.night .user-picker-new { background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%) !important; color: #071008 !important; }
   html.night .user-picker-new:hover { background: linear-gradient(135deg, #a8f048 0%, #cbed7b 100%) !important; }
   html.night .badge-upcoming { background: #B5FF5A !important; color: #071008 !important; }
@@ -246,11 +246,12 @@
     position: relative;
     min-height: min(58vh, 570px);
     margin-bottom: 28px;
-    border-radius: 30px;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: #05070c;
-    box-shadow: 0 30px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(181,255,90,0.12), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    -webkit-mask-image: radial-gradient(ellipse 110% 105% at 50% 45%, #000 55%, rgba(0,0,0,0.55) 80%, transparent 100%);
+    mask-image: radial-gradient(ellipse 110% 105% at 50% 45%, #000 55%, rgba(0,0,0,0.55) 80%, transparent 100%);
     display: flex;
     align-items: stretch;
     isolation: isolate;
@@ -277,16 +278,7 @@
     z-index: 1;
     pointer-events: none;
   }
-  .hero::after {
-    content: "";
-    position: absolute;
-    inset: 18px;
-    border-radius: 22px;
-    border: 1px solid rgba(255,255,255,0.08);
-    pointer-events: none;
-    z-index: 2;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
-  }
+  .hero::after { content: none; }
   .hero-video {
     position: absolute;
     inset: 0;
@@ -829,8 +821,7 @@
     #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px calc(env(safe-area-inset-bottom, 0px) + 76px); }
 
     /* Hero */
-    .hero { min-height: 48svh; border-radius: 28px; box-shadow: 0 26px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.06); }
-    .hero::after { inset: 8px; border-radius: 22px; border-color: rgba(255,255,255,0.12); }
+    .hero { min-height: 48svh; box-shadow: none; }
     .hero-grid { padding: 76px 18px 22px; gap: 12px; align-content: end; grid-template-columns: 1fr; }
     .hero-content::before { content: none; }
     .hero-content { max-width: 100%; }
@@ -1712,8 +1703,8 @@ function App() {
       showId: addTicketsModal?.showId ?? null,
       friends, shows: showsEnriched, currentUser,
       onClose: () => setAddTicketsModal(null),
-      onSave: async (showId, friendId, count) => {
-        await setTicketCount(showId, friendId, count, currentUser?.id || friendId);
+      onSave: async (showId, friendId, count, isPrivate) => {
+        await setTicketCount(showId, friendId, count, currentUser?.id || friendId, isPrivate);
         setAddTicketsModal(null);
       },
     }),
@@ -3177,7 +3168,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
       ),
       count === 0 && h('p', { style: { fontSize: 11, color: 'var(--red)', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em' } }, (activeFriend?.name) + ' will be removed from this show'),
       canTogglePrivacy && count > 0 && h('label', {
-        style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, marginBottom: 14, cursor: 'pointer', fontSize: 13 },
+        style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.10)', borderRadius: 10, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: '#0F0F0F' },
       },
         h('input', {
           type: 'checkbox',
@@ -3187,7 +3178,7 @@ function EditChipModal({ show, friends, currentUser, friendId, onClose, onSave }
         }),
         h('span', { style: { flex: 1 } },
           h('div', { style: { fontWeight: 600 } }, '🔒 Hide from others'),
-          h('div', { style: { fontSize: 11, color: '#999', marginTop: 2 } }, "Only you'll see you have tickets for this show")
+          h('div', { style: { fontSize: 11, color: '#666', marginTop: 2 } }, "Only you'll see you have tickets for this show")
         )
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
@@ -3373,14 +3364,19 @@ function AddTicketsModal({ friendId, showId, friends, shows, currentUser, onClos
   const [selFriendId, setSelFriendId] = useState(friendId || currentUser?.id || friends[0]?.id);
   const [selShowId, setSelShowId] = useState(showId ?? allShows[0]?.id ?? null);
   const [count, setCount] = useState(1);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const selFriend = friends.find(f => f.id === selFriendId);
+  // Privacy toggle is only meaningful for the viewer's own ticket.
+  const canTogglePrivacy = currentUser && selFriendId === currentUser.id && count > 0;
 
   const submit = async () => {
     if (!selShowId || !selFriendId) return;
     setSaving(true);
-    await onSave(selShowId, selFriendId, count);
+    await onSave(selShowId, selFriendId, count, canTogglePrivacy ? isPrivate : undefined);
   };
+
+  const stepperLabel = count === 0 ? 'interested' : count === 1 ? 'ticket' : 'tickets';
 
   return h('div', { className: 'modal-overlay', onClick: e => { if (e.target === e.currentTarget) onClose(); } },
     h('div', { className: 'modal', style: { maxWidth: 400 } },
@@ -3399,12 +3395,22 @@ function AddTicketsModal({ friendId, showId, friends, shows, currentUser, onClos
         )
       ),
       h('div', { className: 'stepper' },
-        h('button', { className: 'stepper-btn', onClick: () => setCount(Math.max(1, count - 1)), disabled: count <= 1 }, '−'),
+        h('button', { className: 'stepper-btn', onClick: () => setCount(Math.max(0, count - 1)), disabled: count <= 0 }, '−'),
         h('div', { style: { textAlign: 'center' } },
           h('div', { className: 'stepper-count' }, count),
-          h('div', { style: { fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } }, count === 1 ? 'ticket' : 'tickets')
+          h('div', { style: { fontSize: 10, color: '#666', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 } }, stepperLabel)
         ),
         h('button', { className: 'stepper-btn', onClick: () => setCount(count + 1) }, '+')
+      ),
+      count === 0 && h('p', { style: { fontSize: 12, color: '#0F0F0F', textAlign: 'center', marginBottom: 12, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.05em', background: '#B5FF5A', padding: '8px 10px', borderRadius: 10 } }, 'Marked as interested — no tickets yet'),
+      canTogglePrivacy && h('label', {
+        style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.10)', borderRadius: 10, marginBottom: 14, cursor: 'pointer', fontSize: 13, color: '#0F0F0F' },
+      },
+        h('input', { type: 'checkbox', checked: isPrivate, onChange: e => setIsPrivate(e.target.checked), style: { width: 16, height: 16, cursor: 'pointer' } }),
+        h('span', { style: { flex: 1 } },
+          h('div', { style: { fontWeight: 600 } }, '🔒 Hide from others'),
+          h('div', { style: { fontSize: 11, color: '#666', marginTop: 2 } }, "Only you'll see this on the card")
+        )
       ),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
         h('button', { className: 'ghost-btn', onClick: onClose }, 'Cancel'),
