@@ -2261,15 +2261,16 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         pctUp >= 75 ? '🔥 loved · ' + pctUp + '%' : pctUp >= 50 ? '👌 solid · ' + pctUp + '%' : '💀 skip · ' + pctUp + '%'
       )
     ),
-    // Add tickets pill on its own row
-    !show.past && h('button', {
-      className: 'ghost-btn show-card-add-tickets show-card-add-tickets-solo',
-      onClick: () => onAddTickets && onAddTickets(show.id),
-    }, '+ Add tickets'),
-    // Crowdvolt above Dice — bottom-right of the card (flex order pushes it after the footer)
-    !show.past && h('div', {
+    // Action row: Add tickets pill on the left + Crowdvolt-above-Dice column on the right
+    !show.past && h('div', { className: 'show-action-row', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8 } },
+      h('button', {
+        className: 'ghost-btn show-card-add-tickets',
+        onClick: () => onAddTickets && onAddTickets(show.id),
+        style: { flex: '0 0 49%', minHeight: 36, padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
+      }, '+ Add tickets'),
+      h('div', {
         className: 'show-ticket-links',
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: 'auto', alignSelf: 'flex-end', marginTop: 8, order: 99 },
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: 'auto', flex: '0 0 auto' },
       },
       h('a', {
         className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
@@ -2290,6 +2291,7 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         h('img', { src: 'https://dice.fm/favicon.ico', alt: '', style: { width: 12, height: 12 }, onError: e => { e.target.style.display = 'none'; } }),
         'Dice',
         dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
+      )
       )
     ),
     // For past shows, render a single Add tickets button by itself (no ticket links)
