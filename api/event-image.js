@@ -125,7 +125,24 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, jsonLdDebug, htmlLen: html.length } : {}) });
+    // Price — 3) Visible HTML fallback. Dice migrated their event pages so
+    // __NEXT_DATA__ no longer carries the price reliably; the rendered HTML
+    // still shows "From £15", "$ 25.00", "From $89", etc. Pull the lowest
+    // plausible match.
+    let visibleMatches = null;
+    if (price === null) {
+      // Currency followed by digits, optionally with decimals.
+      const rx = /(?:from\s+)?(?:[$£€]|US\$|USD|GBP|EUR)\s*(\d{1,4}(?:[.,]\d{1,2})?)/gi;
+      const candidates = [...html.matchAll(rx)]
+        .map(m => parseFloat(m[1].replace(',', '.')))
+        .filter(p => !isNaN(p) && p >= 1 && p <= 9999);
+      if (candidates.length) {
+        price = Math.min(...candidates);
+        if (debug) visibleMatches = candidates;
+      }
+    }
+
+    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, jsonLdDebug, visibleMatches, htmlLen: html.length } : {}) });
   } catch (err) {
     return res.status(200).json({ imageUrl: null, price: null, error: err.message });
   }
