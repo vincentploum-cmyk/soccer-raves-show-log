@@ -2143,7 +2143,10 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
   if (!show.past) cardClass += ' upcoming';
   else cardClass += ' past';
 
-  return h('div', { className: cardClass },
+  const cardBg = show.artist_image_url
+    ? { backgroundImage: `linear-gradient(180deg, rgba(8,10,15,0.86) 0%, rgba(8,10,15,0.93) 70%, rgba(8,10,15,0.96) 100%), url("${show.artist_image_url}")`, backgroundSize: 'cover, 130%', backgroundPosition: 'center, center', backgroundRepeat: 'no-repeat, no-repeat' }
+    : null;
+  return h('div', { className: cardClass, style: cardBg },
     h('div', { className: 'artist-row' },
       h(ArtistPhoto, { artist: show.artist, imgUrl: show.artist_image_url || null, className: 'artist-photo', style: { width: 141, height: 141 } }),
       h('div', { className: 'show-card-body' },
