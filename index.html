@@ -1861,16 +1861,6 @@ function Hero({ totals, nextShow, currentUser, isNight, onOpenShows, onOpenMyTic
         h('p', { className: 'hero-sub' }, isNight
           ? 'An after-hours control room for the nights that matter, who is already in, who still needs tickets, and which shows are becoming core memories before the group chat catches up.'
           : 'A bright daytime board for planning the next one, locking the crew, and figuring out which shows deserve a hard pivot from the pitch to the festival gates.'),
-        h('div', { className: 'hero-actions' },
-          h('button', { className: 'hero-button hero-button-primary', onClick: onOpenShows },
-            h('span', null, 'Enter the board'),
-            h('span', { className: 'hero-button-kicker' }, `${totals.upcoming} upcoming`)
-          ),
-          h('button', { className: 'hero-button hero-button-secondary', onClick: onOpenMyTickets },
-            h('span', null, `${userFirstName} tickets`),
-            h('span', { className: 'hero-button-kicker' }, 'jump to my stack')
-          ),
-        ),
         h('div', { className: 'hero-proof-row' },
           h('div', { className: 'hero-proof-card' },
             h('div', { className: 'hero-proof-label' }, 'Next drop'),
