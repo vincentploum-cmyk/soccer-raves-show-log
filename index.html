@@ -649,6 +649,14 @@
   }
 
   .filter-shell { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .shows-toolbar-row { display: flex; gap: 8px; align-items: stretch; }
+  .shows-toolbar-row > * { flex: 1 1 0; min-width: 0; }
+  .roster-shell-compact { padding: 0; border-bottom: none; }
+  .roster-shell-compact .roster-picker { padding: 0; gap: 0; display: flex; }
+  .roster-shell-compact .roster-picker select { flex: 1; min-width: 0; min-height: 44px; padding: 8px 12px; font-size: 13px; border-radius: 14px; }
+  .filter-toggle-compact { min-height: 44px; padding: 8px 14px; }
+  .filter-toggle-compact .filter-toggle-value { font-size: 12px; }
+  .filter-toggle-compact .filter-toggle-label { font-size: 9px; }
   .filter-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .filter-toggle {
     flex: 1 1 280px;
@@ -1620,8 +1628,9 @@ function App() {
             : isAdmin && h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
         )
       ),
-      // Friend roster + profile preview
-      friends.length > 0 && h(FriendRoster, {
+      // Friend roster + profile preview (only outside the shows tab; on shows
+      // it renders inline with the filter pill so the two sit side-by-side)
+      friends.length > 0 && tab !== 'shows' && h(FriendRoster, {
         friends,
         viewedFriendId,
         setViewedFriendId,
@@ -1640,6 +1649,8 @@ function App() {
       shows: sorted, allShows: showsEnriched, friends, currentUser,
       isAdmin,
       filter, setFilter,
+      viewedFriendId, setViewedFriendId,
+      onEditProfile: (f) => setProfileTarget(f),
       onAdd: () => setAddModalOpen(true),
       onAddFriend: () => setAddFriendModalOpen(true),
       onImport: () => setImportModalOpen(true),
@@ -1965,7 +1976,7 @@ function VisitLog({ visits, friends }) {
   );
 }
 
-function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
+function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, setFilter, viewedFriendId, setViewedFriendId, onEditProfile, onAdd, onAddFriend, onImport, onRefreshImages, onEditChip, onToggleReaction, onDeleteShow, onEditShow, onAddTickets, onOpenMedia, onOpenGoingList }) {
   const firstUpcomingIdx = shows.findIndex((s) => !s.past);
   const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' ? true : window.innerWidth > 820);
   const venues = useMemo(() => {
@@ -1986,18 +1997,21 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
 
   return h('div', null,
     h('div', { className: 'filter-shell' },
-      h('div', { className: 'filter-toolbar' },
+      friends.length > 0 && h('div', { className: 'shows-toolbar-row' },
+        h(FriendRoster, { friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile, compact: true }),
         h('button', {
-          className: 'filter-toggle',
+          className: 'filter-toggle filter-toggle-compact',
           onClick: () => setFiltersOpen((open) => !open),
           'aria-expanded': filtersOpen,
         },
           h('div', { className: 'filter-toggle-meta' },
-            h('div', { className: 'filter-toggle-label' }, activeFilterCount ? `${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'} active` : 'Filters'),
+            h('div', { className: 'filter-toggle-label' }, activeFilterCount ? `${activeFilterCount} filter${activeFilterCount === 1 ? '' : 's'}` : 'Filters'),
             h('div', { className: 'filter-toggle-value' }, filterSummary)
           ),
           h('div', { className: 'filter-toggle-icon' }, filtersOpen ? '−' : '+')
         ),
+      ),
+      h('div', { className: 'filter-toolbar' },
         h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show')
       ),
       filtersOpen && h('div', { className: 'filter-panel' },
@@ -2721,13 +2735,13 @@ function Avatar({ friend, size = 36, style: extraStyle, zoomable = false }) {
 }
 
 // ===== Friend roster + profile preview =====
-function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile }) {
+function FriendRoster({ friends, viewedFriendId, setViewedFriendId, currentUser, onEditProfile, compact }) {
   const viewed = friends.find((f) => f.id === viewedFriendId);
   const isOwnProfile = currentUser?.id === viewed?.id;
   const sortedFriends = [...friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  return h('div', { className: 'roster-shell' },
+  return h('div', { className: 'roster-shell' + (compact ? ' roster-shell-compact' : '') },
     h('div', { className: 'roster-picker' },
-      h('span', { className: 'user-picker-label' }, 'profiles'),
+      !compact && h('span', { className: 'user-picker-label' }, 'profiles'),
       h('select', {
         value: viewedFriendId || '',
         onChange: (e) => setViewedFriendId(e.target.value ? parseInt(e.target.value) : null),
