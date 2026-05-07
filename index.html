@@ -998,8 +998,8 @@
     .mb-tab .mb-label { font-size: 9px; line-height: 1; }
     .mb-tab.active { background: linear-gradient(180deg, rgba(181,255,90,0.22) 0%, rgba(181,255,90,0.10) 100%); color: #B5FF5A; box-shadow: inset 0 0 0 1px rgba(181,255,90,0.28); }
     .mb-tab:active { transform: scale(0.96); }
-    /* Hide top tabs on mobile — bottom nav replaces them */
-    .top-shell .tabs { display: none; }
+    /* Top tabs are the primary nav on mobile (bottom nav was removed) */
+    .top-shell .tabs { display: flex; }
     /* Reserve room above the bottom nav */
     #root { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px) !important; }
   }
@@ -1793,20 +1793,6 @@ function App() {
       },
       onNew: () => { setShowWelcomeModal(false); setProfileTarget(false); },
     }),
-    h('nav', { className: 'mobile-bottom-nav', 'aria-label': 'Primary' },
-      h('button', { className: 'mb-tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') },
-        h('span', { className: 'mb-icon' }, '◎'),
-        h('span', { className: 'mb-label' }, 'Shows')
-      ),
-      h('button', { className: 'mb-tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') },
-        h('span', { className: 'mb-icon' }, '✦'),
-        h('span', { className: 'mb-label' }, 'Mine')
-      ),
-      h('button', { className: 'mb-tab' + (tab === 'leaderboard' ? ' active' : ''), onClick: () => setTab('leaderboard') },
-        h('span', { className: 'mb-icon' }, '♚'),
-        h('span', { className: 'mb-label' }, 'Board')
-      ),
-    ),
     toastEl,
   );
 }
