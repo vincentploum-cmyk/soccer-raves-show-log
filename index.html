@@ -699,7 +699,7 @@
   .roster-picker select { flex: 1; min-width: 0; }
 
   /* Show card */
-  .show-card { background: linear-gradient(180deg, rgba(18,21,31,0.92) 0%, rgba(11,13,21,0.94) 100%); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 18px 20px; position: relative; overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+  .show-card { display: flex; flex-direction: column; background: linear-gradient(180deg, rgba(18,21,31,0.92) 0%, rgba(11,13,21,0.94) 100%); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 18px 20px; position: relative; overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
   .show-card::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(181,255,90,0.08), transparent 28%), radial-gradient(circle at bottom left, rgba(255,45,146,0.08), transparent 22%); pointer-events: none; }
   .show-card:hover { transform: translateY(-4px); box-shadow: 0 24px 56px rgba(0,0,0,0.34), 0 0 0 1px rgba(181,255,90,0.12); border-color: rgba(181,255,90,0.16); }
   .show-card.upcoming::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #B5FF5A; border-radius: 3px 0 0 3px; }
@@ -715,7 +715,12 @@
   .venue-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.7); text-decoration: none; padding: 7px 11px; margin-top: 2px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); transition: all 0.15s ease; }
   .venue-link:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.12); }
 
-  .going-stat { text-align: right; flex-shrink: 0; background: rgba(0,0,0,0.5); border: 1px solid rgba(181,255,90,0.25); padding: 6px 10px; border-radius: 10px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; user-select: none; box-shadow: 0 0 18px rgba(181,255,90,0.12); }
+  .going-stat { text-align: right; flex-shrink: 0; background: rgba(7,9,14,0.78); border: 1px solid rgba(181,255,90,0.32); padding: 6px 10px 6px 11px; border-radius: 999px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; user-select: none; box-shadow: 0 6px 18px rgba(0,0,0,0.32), 0 0 18px rgba(181,255,90,0.16); display: inline-flex; align-items: center; gap: 7px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  /* GOING pill: top-right of every show card */
+  .show-card-main > div:last-child { position: absolute; top: 12px; right: 12px; z-index: 5; align-items: flex-end !important; }
+  .going-stat-value { line-height: 1; }
+  /* Ticket links: bottom-right of every show card */
+  .show-ticket-links { order: 10; align-self: flex-end; }
   .going-stat:hover { transform: translateY(-1px); box-shadow: 0 0 28px rgba(181,255,90,0.25), 0 4px 14px rgba(0,0,0,0.4); }
   .going-stat:active { transform: translateY(0); }
   .going-stat.disabled { cursor: default; }
@@ -872,11 +877,11 @@
     .show-card-top { gap: 6px; }
     .venue-link { margin-top: 8px; max-width: 100%; }
     .show-note { font-size: 11px; margin-top: 7px; }
-    /* Going stat -> floats over artist photo, top-right */
-    .show-card-main > div:last-child { position: absolute; top: 10px; right: 10px; z-index: 3; align-items: flex-end !important; }
-    .going-stat { width: auto; flex-direction: row; align-items: center; justify-content: flex-end; text-align: right; gap: 6px; padding: 6px 10px; border-radius: 999px; background: rgba(7,9,14,0.72) !important; border: 1px solid rgba(181,255,90,0.35) !important; box-shadow: 0 6px 18px rgba(0,0,0,0.4), 0 0 14px rgba(181,255,90,0.18) !important; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-    .going-stat-value { font-size: 15px; line-height: 1; margin: 0; }
-    .going-stat-label { font-size: 9px; color: rgba(255,255,255,0.78) !important; }
+    /* Going pill is global (top-right of card); just tighten on mobile */
+    .show-card-main > div:last-child { top: 10px; right: 10px; }
+    .going-stat { padding: 5px 10px; gap: 6px; }
+    .going-stat-value { font-size: 15px; margin: 0; }
+    .going-stat-label { font-size: 9px; }
     .going-stat-label:last-child { display: none; }
     .chips { gap: 8px; margin-top: 12px; }
     .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
