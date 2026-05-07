@@ -54,9 +54,8 @@
   body { min-height: 100vh; background: radial-gradient(circle at top, rgba(181,255,90,0.10), transparent 24%), radial-gradient(circle at 82% 18%, rgba(255,45,146,0.10), transparent 18%), linear-gradient(180deg, #07070d 0%, #0a0a14 46%, #07070d 100%); color: var(--body-color); font-family: 'Space Grotesk', sans-serif; }
 
   /* Night-mode overrides for white UI panels */
-  html.night .top-shell,
   html.night .filter-bar { background: var(--card-bg) !important; }
-  html.night .user-picker { background: transparent !important; }
+  html.night .user-picker, html.night .top-shell { background: transparent !important; border: none !important; box-shadow: none !important; }
   html.night .get-tickets-btn { background: rgba(255,255,255,0.08); color: #ccc; }
   html.night .get-tickets-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
   html.night .ghost-btn { background: rgba(255,255,255,0.08); color: #ccc; }
