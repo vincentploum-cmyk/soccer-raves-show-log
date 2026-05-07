@@ -86,7 +86,16 @@
   html.night .modal input, html.night .modal select, html.night .modal textarea { background: rgba(0,0,0,0.05); color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; color-scheme: light; }
   html.night .modal input:focus, html.night .modal select:focus { background: rgba(0,0,0,0.08); box-shadow: 0 0 0 2px rgba(0,0,0,0.14); }
   html.night .modal option { background: #fff; color: #0F0F0F; }
-  html.night .modal input[type="date"], html.night .modal input[type="time"], html.night .modal input[type="datetime-local"] { color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; color-scheme: light; }
+  html.night .modal input[type="date"], html.night .modal input[type="time"], html.night .modal input[type="datetime-local"] { color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; color-scheme: light; opacity: 1 !important; }
+  /* iOS Safari renders date values inside pseudo-elements that ignore the parent's color/-webkit-text-fill-color */
+  html.night .modal input[type="date"]::-webkit-date-and-time-value,
+  html.night .modal input[type="date"]::-webkit-datetime-edit,
+  html.night .modal input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+  html.night .modal input[type="date"]::-webkit-datetime-edit-text,
+  html.night .modal input[type="date"]::-webkit-datetime-edit-month-field,
+  html.night .modal input[type="date"]::-webkit-datetime-edit-day-field,
+  html.night .modal input[type="date"]::-webkit-datetime-edit-year-field { color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; opacity: 1 !important; text-align: left; }
+  html.night .modal input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0); opacity: 0.65; }
   /* Modal Cancel buttons: dark text on the white modal */
   html.night .modal .ghost-btn { background: rgba(15,15,15,0.06); color: #0F0F0F !important; border: 1px solid rgba(15,15,15,0.14); }
   html.night .modal .ghost-btn:hover { background: rgba(15,15,15,0.12); color: #0F0F0F !important; }
