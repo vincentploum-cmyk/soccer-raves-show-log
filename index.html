@@ -1253,31 +1253,12 @@ function App() {
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const { show: showToast, toastEl } = useToast();
 
-  // Night mode: null = auto (time-based), true = forced night, false = forced day
-  const [nightOverride, setNightOverride] = useState(() => {
-    const saved = localStorage.getItem('nightOverride');
-    if (saved === 'night') return true;
-    if (saved === 'day') return false;
-    return null;
-  });
+  // Light mode is disabled — force night/dark for everyone.
+  const [nightOverride, setNightOverride] = useState(true);
   useEffect(() => {
-    if (nightOverride === null) localStorage.removeItem('nightOverride');
-    else localStorage.setItem('nightOverride', nightOverride ? 'night' : 'day');
-  }, [nightOverride]);
-  useEffect(() => {
-    function isNightEST() {
-      const h = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10);
-      return h >= 19 || h < 7;
-    }
-    const apply = () => {
-      const night = nightOverride !== null ? nightOverride : isNightEST();
-      document.documentElement.classList.toggle('night', night);
-    };
-    apply();
-    const id = setInterval(apply, 60000);
-    return () => clearInterval(id);
-  }, [nightOverride]);
-  const isNight = document.documentElement.classList.contains('night');
+    document.documentElement.classList.add('night');
+  }, []);
+  const isNight = true;
 
   // Load + realtime
   useEffect(() => {
@@ -1609,12 +1590,6 @@ function App() {
       onOpenShows: () => setTab('shows'),
       onOpenMyTickets: () => setTab('friend'),
     }),
-    // Night mode toggle (fixed top-right)
-    h('button', {
-      onClick: () => setNightOverride(prev => prev === null ? !isNight : prev === true ? false : null),
-      title: nightOverride === null ? (isNight ? 'Auto mode, tap for day mode' : 'Auto mode, tap for night mode') : nightOverride ? 'Night mode, tap for day mode' : 'Day mode, tap to return to auto',
-      style: { position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 12px)', left: 14, zIndex: 50, width: 34, height: 34, borderRadius: '50%', background: isNight ? '#2a2a3a' : 'rgba(255,255,255,0.9)', border: isNight ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)', fontSize: 16, lineHeight: '34px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.18)', cursor: 'pointer', backdropFilter: 'blur(6px)' }
-    }, nightOverride === null ? (isNight ? '☀️' : '🌙') : nightOverride ? '☀️' : '↺'),
     // White header panel: user-picker + roster + tabs (no event list inside)
     h('div', { className: 'top-shell' },
       // User picker
