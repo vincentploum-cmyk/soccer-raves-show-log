@@ -244,7 +244,7 @@
   /* Hero */
   .hero {
     position: relative;
-    min-height: min(78vh, 760px);
+    min-height: min(58vh, 570px);
     margin-bottom: 28px;
     border-radius: 30px;
     overflow: hidden;
@@ -368,10 +368,11 @@
     font-weight: 800;
     letter-spacing: -0.055em;
     line-height: 0.9;
-    color: #fff;
+    color: #B5FF5A;
+    -webkit-text-fill-color: #B5FF5A;
     max-width: 8.2ch;
     text-wrap: balance;
-    text-shadow: 0 8px 36px rgba(0,0,0,0.45);
+    text-shadow: 0 8px 36px rgba(0,0,0,0.45), 0 0 24px rgba(181,255,90,0.22);
   }
   .hero-title .accent {
     color: #B5FF5A;
@@ -817,7 +818,7 @@
   /* ===== Responsive ===== */
   @media (max-width: 768px) {
     #root { padding: 16px 14px 70px; }
-    .hero { min-height: 680px; }
+    .hero { min-height: 510px; }
     .hero-grid { grid-template-columns: 1fr; align-items: end; padding: 28px; }
     .hero-panel { justify-self: start; width: min(100%, 420px); }
     /* Prevent iOS Safari from zooming on input focus (triggers when font-size < 16px) */
@@ -828,7 +829,7 @@
     #root { padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px calc(env(safe-area-inset-bottom, 0px) + 76px); }
 
     /* Hero */
-    .hero { min-height: 64svh; border-radius: 28px; box-shadow: 0 26px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.06); }
+    .hero { min-height: 48svh; border-radius: 28px; box-shadow: 0 26px 70px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.06); }
     .hero::after { inset: 8px; border-radius: 22px; border-color: rgba(255,255,255,0.12); }
     .hero-grid { padding: 76px 18px 22px; gap: 12px; align-content: end; grid-template-columns: 1fr; }
     .hero-content::before { content: none; }
