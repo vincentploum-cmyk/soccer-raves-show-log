@@ -649,12 +649,12 @@
   }
 
   .filter-shell { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-  .shows-toolbar-row { display: flex; gap: 10px; align-items: stretch; }
-  .shows-toolbar-row > .roster-shell-compact { flex: 1 1 auto; min-width: 0; }
-  .roster-shell-compact { padding: 0; border-bottom: none; }
-  .roster-shell-compact .roster-picker { padding: 0; gap: 0; display: flex; }
-  .roster-shell-compact .roster-picker select { flex: 1; min-width: 0; min-height: 50px; padding: 12px 18px; font-size: 15px; font-weight: 600; border-radius: 16px; }
-  .filter-icon-btn { flex: 0 0 50px; width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); color: rgba(255,255,255,0.78); cursor: pointer; position: relative; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; padding: 0; }
+  .shows-toolbar-row { display: flex; gap: 10px; align-items: center; }
+  .shows-toolbar-row > .roster-shell-compact { flex: 0 1 75%; min-width: 0; }
+  .roster-shell-compact { padding: 0; border-bottom: none; height: 50px; display: flex; align-items: stretch; }
+  .roster-shell-compact .roster-picker { padding: 0; gap: 0; display: flex; flex: 1; min-width: 0; }
+  .roster-shell-compact .roster-picker select { flex: 1; min-width: 0; height: 50px; min-height: 50px; padding: 0 18px; font-size: 15px; font-weight: 600; border-radius: 16px; box-sizing: border-box; }
+  .filter-icon-btn { flex: 0 0 50px; width: 50px; height: 50px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); color: rgba(255,255,255,0.78); cursor: pointer; position: relative; transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease; padding: 0; }
   .filter-icon-btn:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.18); color: #fff; }
   .filter-icon-btn.is-open { background: rgba(181,255,90,0.12); border-color: rgba(181,255,90,0.40); color: #B5FF5A; }
   .filter-icon-dot { position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: #B5FF5A; box-shadow: 0 0 8px rgba(181,255,90,0.6); }
