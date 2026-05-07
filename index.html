@@ -2024,8 +2024,8 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
         ),
       ),
       h('div', { className: 'filter-toolbar' },
-        h('button', { className: 'primary-btn', onClick: onAdd, style: { flex: 1 } }, '+ Add show'),
-        isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet', style: { whiteSpace: 'nowrap' } }, '↥ Import')
+        h('button', { className: 'primary-btn', onClick: onAdd, style: { flex: '0 0 60%' } }, '+ Add show'),
+        h('button', { className: 'ghost-btn', onClick: onAddFriend, style: { flex: 1, whiteSpace: 'nowrap' } }, '+ Add friend')
       ),
       filtersOpen && h('div', { className: 'filter-panel' },
         h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
@@ -2048,8 +2048,6 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
           value: filter.search, onChange: (e) => setFilter({ ...filter, search: e.target.value })
         }),
         h('div', { className: 'filter-actions' },
-          h('button', { className: 'ghost-btn', onClick: onAddFriend }, '+ Add friend'),
-          isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet' }, '↥ Import'),
           isAdmin && h('button', { className: 'ghost-btn', onClick: onRefreshImages, title: 'Re-fetch artist images for shows that are missing one' }, '↻ Refresh images')
         )
       )
