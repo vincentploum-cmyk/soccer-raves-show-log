@@ -27,8 +27,10 @@ export default async function handler(req, res) {
       html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
     const imageUrl = imgMatch?.[1] || null;
 
-    // Price — 1) JSON-LD structured data
+    // Price + time — 1) JSON-LD structured data
     let price = null;
+    let startDate = null;
+    let endDate = null;
     let jsonLdDebug = null;
     const jsonLdBlocks = [...html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
     for (const block of jsonLdBlocks) {
@@ -36,15 +38,18 @@ export default async function handler(req, res) {
         const data = JSON.parse(block[1]);
         const nodes = Array.isArray(data) ? data : (data['@graph'] ? data['@graph'] : [data]);
         for (const node of nodes) {
+          // Capture event-level start/end date if present
+          if (!startDate && node.startDate) startDate = node.startDate;
+          if (!endDate && node.endDate) endDate = node.endDate;
           const offers = node.offers;
           if (!offers) continue;
           const list = Array.isArray(offers) ? offers : [offers];
           if (debug) jsonLdDebug = list.map(o => ({ price: o.price, lowPrice: o.lowPrice, availability: o.availability }));
           const available = list.filter(o => !o.availability || o.availability.toString().toLowerCase().includes('instock'));
           const prices = available.map(o => parseFloat(o.price || o.lowPrice)).filter(p => !isNaN(p) && p > 0);
-          if (prices.length) { price = Math.min(...prices); break; }
+          if (prices.length && price === null) price = Math.min(...prices);
         }
-        if (price !== null) break;
+        if (price !== null && startDate) break;
       } catch (_) {}
     }
 
@@ -142,8 +147,8 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ imageUrl, price, ...(debug ? { debugInfo, jsonLdDebug, visibleMatches, htmlLen: html.length } : {}) });
+    return res.status(200).json({ imageUrl, price, startDate, endDate, ...(debug ? { debugInfo, jsonLdDebug, visibleMatches, htmlLen: html.length } : {}) });
   } catch (err) {
-    return res.status(200).json({ imageUrl: null, price: null, error: err.message });
+    return res.status(200).json({ imageUrl: null, price: null, startDate: null, endDate: null, error: err.message });
   }
 }
