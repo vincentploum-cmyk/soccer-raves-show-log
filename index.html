@@ -905,7 +905,9 @@
     .chips { gap: 8px; margin-top: 12px; }
     .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
     .chip-count { padding: 2px 6px; }
-    .show-card-footer { flex-direction: column; align-items: stretch; gap: 6px; margin-top: 8px; }
+    .show-card-footer { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+    .show-card-footer .show-card-admin { width: auto; flex: 0 1 auto; }
+    .show-card-footer .show-ticket-links { flex: 0 0 auto; }
     .show-action-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
     .show-action-row .show-card-add-tickets { width: 54%; min-height: 36px; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 54%; }
     .show-action-row .show-ticket-links { flex: 0 0 auto; margin-top: 0; align-self: center; }
@@ -2261,45 +2263,18 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         pctUp >= 75 ? '🔥 loved · ' + pctUp + '%' : pctUp >= 50 ? '👌 solid · ' + pctUp + '%' : '💀 skip · ' + pctUp + '%'
       )
     ),
-    // Action row: Add tickets pill on the left + Crowdvolt-above-Dice column on the right
-    !show.past && h('div', { className: 'show-action-row', style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8 } },
-      h('button', {
-        className: 'ghost-btn show-card-add-tickets',
-        onClick: () => onAddTickets && onAddTickets(show.id),
-        style: { flex: '0 0 49%', minHeight: 36, padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' },
-      }, '+ Add tickets'),
-      h('div', {
-        className: 'show-ticket-links',
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: 'auto', flex: '0 0 auto' },
-      },
-      h('a', {
-        className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
-        href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
-        target: '_blank', rel: 'noopener noreferrer',
-        style: { width: 'auto', flex: '0 0 auto', justifyContent: 'center', padding: '5px 10px', minHeight: 26, height: 26, borderRadius: 999, fontSize: 11, gap: 5, whiteSpace: 'nowrap' },
-      },
-        h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', style: { width: 12, height: 12 }, onError: e => { e.target.style.display = 'none'; } }),
-        noTicketsOnCrowdvolt ? 'No tickets' : 'Crowdvolt',
-        !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
-      ),
-      h('a', {
-        className: 'get-tickets-btn',
-        href: show.dice_url || `https://dice.fm/browse?q=${encodeURIComponent(show.artist || '')}`,
-        target: '_blank', rel: 'noopener noreferrer',
-        style: { width: 'auto', flex: '0 0 auto', justifyContent: 'center', padding: '5px 10px', minHeight: 26, height: 26, borderRadius: 999, fontSize: 11, gap: 5, whiteSpace: 'nowrap' },
-      },
-        h('img', { src: 'https://dice.fm/favicon.ico', alt: '', style: { width: 12, height: 12 }, onError: e => { e.target.style.display = 'none'; } }),
-        'Dice',
-        dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
-      )
-      )
-    ),
+    // Add tickets pill on its own row (49% width)
+    !show.past && h('button', {
+      className: 'ghost-btn show-card-add-tickets show-card-add-tickets-solo',
+      onClick: () => onAddTickets && onAddTickets(show.id),
+      style: { width: '49%', minHeight: 36, padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 8 },
+    }, '+ Add tickets'),
     // For past shows, render a single Add tickets button by itself (no ticket links)
     show.past && h('button', {
       className: 'ghost-btn show-card-add-tickets show-card-add-tickets-solo',
       onClick: () => onAddTickets && onAddTickets(show.id),
     }, '+ Add tickets'),
-    // Bottom row: edit/delete at the very bottom of the card
+    // Bottom row: edit/delete on the left, Crowdvolt-above-Dice on the right
     h('div', { className: 'show-card-footer' },
       currentUser && h('div', { className: 'show-card-admin' },
         h('button', {
@@ -2310,6 +2285,31 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           onClick: () => onDeleteShow(show.id),
           className: 'text-action'
         }, 'delete')
+      ),
+      !show.past && h('div', {
+        className: 'show-ticket-links',
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: 'auto', flex: '0 0 auto', marginTop: 0 },
+      },
+        h('a', {
+          className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
+          href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
+          target: '_blank', rel: 'noopener noreferrer',
+          style: { width: 'auto', flex: '0 0 auto', justifyContent: 'center', padding: '5px 10px', minHeight: 26, height: 26, borderRadius: 999, fontSize: 11, gap: 5, whiteSpace: 'nowrap' },
+        },
+          h('img', { src: 'https://www.crowdvolt.com/favicon.ico', alt: '', style: { width: 12, height: 12 }, onError: e => { e.target.style.display = 'none'; } }),
+          noTicketsOnCrowdvolt ? 'No tickets' : 'Crowdvolt',
+          !noTicketsOnCrowdvolt && ticketPrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(ticketPrice) ? ticketPrice : ticketPrice.toFixed(2)}`),
+        ),
+        h('a', {
+          className: 'get-tickets-btn',
+          href: show.dice_url || `https://dice.fm/browse?q=${encodeURIComponent(show.artist || '')}`,
+          target: '_blank', rel: 'noopener noreferrer',
+          style: { width: 'auto', flex: '0 0 auto', justifyContent: 'center', padding: '5px 10px', minHeight: 26, height: 26, borderRadius: 999, fontSize: 11, gap: 5, whiteSpace: 'nowrap' },
+        },
+          h('img', { src: 'https://dice.fm/favicon.ico', alt: '', style: { width: 12, height: 12 }, onError: e => { e.target.style.display = 'none'; } }),
+          'Dice',
+          dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
+        )
       ),
     ),
   );
