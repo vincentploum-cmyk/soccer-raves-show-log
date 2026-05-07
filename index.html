@@ -1117,7 +1117,7 @@
   /* Profile */
   .user-picker-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
   .user-picker-edit { font-size: 11px; color: rgba(255,255,255,0.54); background: none; border: none; cursor: pointer; padding: 0 4px; text-decoration: underline; }
-  .my-tickets-pill { display: inline-flex; align-items: center; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 999px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.86); border: 1px solid rgba(255,255,255,0.10); cursor: pointer; white-space: nowrap; }
+  .my-tickets-pill { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 999px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.92); border: 1px solid rgba(255,255,255,0.08); cursor: pointer; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); box-sizing: border-box; }
   .my-tickets-pill.active { background: #B5FF5A; color: #0F0F0F; border-color: rgba(181,255,90,0.6); }
   .user-picker-edit:hover { color: #fff; }
   .user-picker-new { font-size: 11px; color: #071008; background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%); border: 1px solid rgba(181,255,90,0.34); cursor: pointer; padding: 5px 10px; border-radius: 999px; font-weight: 700; box-shadow: 0 10px 24px rgba(181,255,90,0.16); }
@@ -1680,9 +1680,6 @@ function App() {
         onEditProfile: (f) => setProfileTarget(f),
       }),
       // Tabs
-      h('div', { className: 'tabs' },
-        h('button', { className: 'tab' + (tab === 'leaderboard' ? ' active' : ''), onClick: () => setTab('leaderboard') }, '🏆 Leaderboard'),
-      ),
     ), // end header panel
     // Content below panel (events are their own cards, no outer wrapper)
     tab === 'shows' && h(ShowsView, {
@@ -1703,7 +1700,6 @@ function App() {
       onOpenMedia: (showId) => setMediaShowId(showId),
       onOpenGoingList: (showId) => setGoingListShowId(showId),
     }),
-    tab === 'leaderboard' && h(LeaderboardView, { friends, shows: showsEnriched, visits }),
     tab === 'friend' && h(FriendView, {
       friends, shows: showsEnriched, currentUser,
       selectedId: selectedFriendId || (currentUser ? currentUser.id : friends[0]?.id),
