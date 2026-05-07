@@ -2250,13 +2250,8 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
       )
     ),
-    // Bottom row: add tickets (left) + edit/delete (right)
+    // Bottom row: edit/delete first, then + Add tickets so it sits at the very bottom of the card
     h('div', { className: 'show-card-footer' },
-      h('button', {
-        className: 'ghost-btn',
-        style: { fontSize: 12, padding: '6px 12px' },
-        onClick: () => onAddTickets && onAddTickets(show.id),
-      }, '+ Add tickets'),
       currentUser && h('div', { className: 'show-card-admin' },
         h('button', {
           onClick: () => onEditShow(show.id),
@@ -2266,7 +2261,12 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
           onClick: () => onDeleteShow(show.id),
           className: 'text-action'
         }, 'delete')
-      )
+      ),
+      h('button', {
+        className: 'ghost-btn',
+        style: { fontSize: 12, padding: '6px 12px' },
+        onClick: () => onAddTickets && onAddTickets(show.id),
+      }, '+ Add tickets'),
     ),
   );
 }
