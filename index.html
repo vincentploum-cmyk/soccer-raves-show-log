@@ -2519,8 +2519,17 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
         target = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
       }
       const resp = await fetch(`/api/sheet-csv?url=${encodeURIComponent(target)}`);
-      if (!resp.ok) throw new Error(`Fetch failed (${resp.status})`);
+      if (!resp.ok) {
+        let body = null;
+        try { body = await resp.json(); } catch {}
+        throw new Error((body && body.error) || `Fetch failed (${resp.status})`);
+      }
       const text = await resp.text();
+      // Defensive: if the proxy didn't catch an HTML response, do it here.
+      const head = text.slice(0, 400).toLowerCase();
+      if (head.includes('<!doctype html') || head.includes('<html')) {
+        throw new Error('Sheet is not public. In Google Sheets, click Share → General access → "Anyone with the link can view".');
+      }
       setCsvText(text);
       doParse(text);
     } catch (e) {
@@ -2543,7 +2552,11 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
     const venueIdx = header.findIndex(h => /^venue$/i.test(h));
     const noteIdx = header.findIndex(h => /^notes?$/i.test(h));
     if (dateIdx < 0 || artistIdx < 0) {
-      setError('Header must include "Date" and "DJ / Artist" columns.');
+      const missing = [];
+      if (dateIdx < 0) missing.push('"Date"');
+      if (artistIdx < 0) missing.push('"DJ / Artist" (or "Artist")');
+      const found = header.filter(Boolean).map(h => `"${h}"`).join(', ') || '(empty header row)';
+      setError(`Missing required column${missing.length === 1 ? '' : 's'}: ${missing.join(' and ')}. Headers found: ${found}.`);
       return;
     }
     // Map remaining columns to friends.

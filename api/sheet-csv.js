@@ -20,6 +20,13 @@ export default async function handler(req, res) {
     });
     if (!resp.ok) return res.status(502).json({ error: `Upstream ${resp.status}` });
     const text = await resp.text();
+    // Google returns the sign-in HTML page (200 OK) when a sheet is not shared
+    // publicly. Detect that and surface a clear error instead of letting the
+    // client try to parse HTML as CSV.
+    const head = text.slice(0, 400).toLowerCase();
+    if (head.includes('<!doctype html') || head.includes('<html') || head.includes('signin/identifier') || head.includes('accounts.google.com')) {
+      return res.status(403).json({ error: 'Sheet is not public. In Google Sheets, click Share → General access → "Anyone with the link can view".' });
+    }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     return res.status(200).send(text);
   } catch (err) {
