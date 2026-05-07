@@ -99,6 +99,11 @@
   /* Modal Cancel buttons: dark text on the white modal */
   html.night .modal .ghost-btn { background: rgba(15,15,15,0.06); color: #0F0F0F !important; border: 1px solid rgba(15,15,15,0.14); }
   html.night .modal .ghost-btn:hover { background: rgba(15,15,15,0.12); color: #0F0F0F !important; }
+  /* Genre / friend chips inside modals must read on the white surface */
+  html.night .modal .chip { color: #0F0F0F !important; -webkit-text-fill-color: #0F0F0F !important; font-weight: 600; }
+  html.night .modal .chip-1 { background: rgba(15,15,15,0.06) !important; border: 1px solid rgba(15,15,15,0.12); color: #0F0F0F !important; }
+  html.night .modal .chip-1:hover { background: rgba(15,15,15,0.10) !important; }
+  html.night .modal .chip-mine { background: #B5FF5A !important; color: #0F0F0F !important; border: 1px solid rgba(141,211,39,0.7); }
   html.night .genre-chip { background: rgba(255,255,255,0.1); color: var(--text-2); }
   html.night .section-divider { color: var(--text-3); }
   html.night .section-divider::before, html.night .section-divider::after { background: var(--border); }
@@ -863,14 +868,16 @@
 
     /* Shell + tabs */
     .top-shell { border-radius: 0; margin-bottom: 14px; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
-    .user-picker { padding: 10px 12px; gap: 8px; flex-wrap: nowrap; align-items: center; }
-    .user-picker-main { width: auto; flex: 1; min-width: 0; gap: 8px; }
-    .user-picker-avatar { width: 28px; height: 28px; }
-    .user-picker-label { font-size: 9px; }
-    .user-picker select { flex: 0 1 auto; width: auto; max-width: 180px; min-height: 32px; padding: 6px 28px 6px 12px; font-size: 13px; border-radius: 999px; }
-    .user-picker-actions { width: auto; margin-left: 0; flex-shrink: 0; }
-    .user-picker-edit { padding: 0 6px; font-size: 11px; min-height: 32px; display: inline-flex; align-items: center; }
-    .user-picker-new { min-height: 32px; padding: 4px 10px; font-size: 11px; display: inline-flex; align-items: center; }
+    .user-picker { padding: 10px 0; gap: 10px; flex-wrap: nowrap; align-items: flex-end; }
+    .user-picker-main { width: auto; flex: 1; min-width: 0; gap: 10px; align-items: center; }
+    .user-picker-avatar { width: 36px; height: 36px; }
+    .user-picker-label { font-size: 9px; line-height: 1; }
+    .user-picker-stack { gap: 5px; align-self: stretch; justify-content: flex-end; }
+    .user-picker select { flex: 0 1 auto; width: auto; max-width: 180px; height: 32px; min-height: 32px; padding: 0 28px 0 14px; font-size: 13px; border-radius: 999px; box-sizing: border-box; }
+    .user-picker-actions { width: auto; margin-left: 0; flex-shrink: 0; align-self: flex-end; height: 32px; gap: 8px; }
+    .user-picker-edit { padding: 0 6px; font-size: 11px; height: 32px; display: inline-flex; align-items: center; }
+    .user-picker-new { height: 32px; padding: 0 12px; font-size: 11px; display: inline-flex; align-items: center; }
+    .my-tickets-pill { height: 32px; min-height: 32px; padding: 0 14px; font-size: 13px; }
     .tabs { padding: 8px 12px 12px; gap: 8px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .tabs::-webkit-scrollbar { display: none; }
     .tab { padding: 10px 14px; font-size: 13px; min-height: 40px; flex: 0 0 auto; border-radius: 16px; }
