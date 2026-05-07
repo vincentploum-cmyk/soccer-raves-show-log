@@ -904,8 +904,15 @@
     .chips { gap: 8px; margin-top: 12px; }
     .chip { max-width: 100%; min-height: 36px; padding: 7px 10px; }
     .chip-count { padding: 2px 6px; }
-    .show-card-footer { flex-direction: column; align-items: center; gap: 10px; }
-    .show-card-footer .show-card-add-tickets { width: 60%; min-height: 40px; padding: 8px 14px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; align-self: center; }
+    .show-card-footer { flex-direction: column; align-items: stretch; gap: 6px; margin-top: 8px; }
+    .show-action-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+    .show-action-row .show-card-add-tickets { width: 54%; min-height: 36px; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 54%; }
+    .show-action-row .show-ticket-links { flex: 0 0 auto; margin-top: 0; align-self: center; }
+    .show-card-add-tickets-solo { width: 54%; min-height: 36px; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; align-self: flex-start; margin-top: 8px; }
+    /* Tighten spacing on event cards */
+    .show-card { padding: 12px; }
+    .chips { margin-top: 8px; gap: 6px; }
+    .reactions { margin-top: 8px; }
     .show-card-admin { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .show-card-admin .text-action { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
     .reactions { gap: 8px; align-items: stretch; }
@@ -2252,11 +2259,16 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         pctUp >= 75 ? '🔥 loved · ' + pctUp + '%' : pctUp >= 50 ? '👌 solid · ' + pctUp + '%' : '💀 skip · ' + pctUp + '%'
       )
     ),
-    // Ticket buttons
-    !show.past && h('div', {
-      className: 'show-ticket-links',
-      style: { alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginTop: 8, marginBottom: 8, width: 'auto' },
-    },
+    // Action row: Add tickets pill on the left + Crowdvolt-above-Dice column on the right
+    !show.past && h('div', { className: 'show-action-row' },
+      h('button', {
+        className: 'ghost-btn show-card-add-tickets',
+        onClick: () => onAddTickets && onAddTickets(show.id),
+      }, '+ Add tickets'),
+      h('div', {
+        className: 'show-ticket-links',
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: 'auto' },
+      },
       h('a', {
         className: 'get-tickets-btn' + (noTicketsOnCrowdvolt ? ' get-tickets-unavailable' : ''),
         href: show.crowdvolt_url || `https://www.crowdvolt.com/search?q=${encodeURIComponent((show.artist || '') + ' ' + (show.venue || ''))}`,
@@ -2277,13 +2289,15 @@ function ShowCard({ show, friends, currentUser, onEditChip, onToggleReaction, on
         'Dice',
         dicePrice && h('span', { className: 'get-tickets-price', style: { fontSize: 10, opacity: 0.7 } }, `$${Number.isInteger(dicePrice) ? dicePrice : dicePrice.toFixed(2)}`),
       )
+      )
     ),
-    // Bottom row: Add tickets (compact, centered) first, edit/delete at the very bottom of the card
+    // For past shows, render a single Add tickets button by itself (no ticket links)
+    show.past && h('button', {
+      className: 'ghost-btn show-card-add-tickets show-card-add-tickets-solo',
+      onClick: () => onAddTickets && onAddTickets(show.id),
+    }, '+ Add tickets'),
+    // Bottom row: edit/delete at the very bottom of the card
     h('div', { className: 'show-card-footer' },
-      h('button', {
-        className: 'ghost-btn show-card-add-tickets',
-        onClick: () => onAddTickets && onAddTickets(show.id),
-      }, '+ Add tickets'),
       currentUser && h('div', { className: 'show-card-admin' },
         h('button', {
           onClick: () => onEditShow(show.id),
