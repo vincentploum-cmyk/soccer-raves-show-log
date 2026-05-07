@@ -2024,7 +2024,8 @@ function ShowsView({ shows, allShows, friends, currentUser, isAdmin, filter, set
         ),
       ),
       h('div', { className: 'filter-toolbar' },
-        h('button', { className: 'primary-btn', onClick: onAdd }, '+ Add show')
+        h('button', { className: 'primary-btn', onClick: onAdd, style: { flex: 1 } }, '+ Add show'),
+        isAdmin && h('button', { className: 'ghost-btn', onClick: onImport, title: 'Bulk import from spreadsheet', style: { whiteSpace: 'nowrap' } }, '↥ Import')
       ),
       filtersOpen && h('div', { className: 'filter-panel' },
         h('select', { value: filter.year, onChange: (e) => setFilter({ ...filter, year: e.target.value }), style: { width: 'auto' } },
