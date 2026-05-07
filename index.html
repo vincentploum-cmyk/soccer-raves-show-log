@@ -1117,6 +1117,8 @@
   /* Profile */
   .user-picker-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
   .user-picker-edit { font-size: 11px; color: rgba(255,255,255,0.54); background: none; border: none; cursor: pointer; padding: 0 4px; text-decoration: underline; }
+  .my-tickets-pill { display: inline-flex; align-items: center; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 999px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.86); border: 1px solid rgba(255,255,255,0.10); cursor: pointer; white-space: nowrap; }
+  .my-tickets-pill.active { background: #B5FF5A; color: #0F0F0F; border-color: rgba(181,255,90,0.6); }
   .user-picker-edit:hover { color: #fff; }
   .user-picker-new { font-size: 11px; color: #071008; background: linear-gradient(135deg, #B5FF5A 0%, #d8ff93 100%); border: 1px solid rgba(181,255,90,0.34); cursor: pointer; padding: 5px 10px; border-radius: 999px; font-weight: 700; box-shadow: 0 10px 24px rgba(181,255,90,0.16); }
   .user-picker-new:hover { background: linear-gradient(135deg, #a8f048 0%, #cbed7b 100%); }
@@ -1659,6 +1661,10 @@ function App() {
             title: `Switch back to ${adminIdentity.name}`,
             onClick: () => switchUser(adminIdentity.id),
           }, '↶ ' + adminIdentity.name.split(' ')[0]),
+          currentUser && h('button', {
+            className: 'tab my-tickets-pill' + (tab === 'friend' ? ' active' : ''),
+            onClick: () => setTab(tab === 'friend' ? 'shows' : 'friend'),
+          }, 'My tickets'),
           currentUser
             ? h('button', { className: 'user-picker-edit', onClick: () => setProfileTarget(currentUser) }, 'edit')
             : isAdmin && h('button', { className: 'user-picker-new', onClick: () => setProfileTarget(false) }, '＋ Create profile')
@@ -1675,8 +1681,6 @@ function App() {
       }),
       // Tabs
       h('div', { className: 'tabs' },
-        h('button', { className: 'tab' + (tab === 'shows' ? ' active' : ''), onClick: () => setTab('shows') }, 'All shows'),
-        h('button', { className: 'tab' + (tab === 'friend' ? ' active' : ''), onClick: () => setTab('friend') }, 'My tickets'),
         h('button', { className: 'tab' + (tab === 'leaderboard' ? ' active' : ''), onClick: () => setTab('leaderboard') }, '🏆 Leaderboard'),
       ),
     ), // end header panel
