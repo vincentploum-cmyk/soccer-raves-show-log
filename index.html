@@ -257,10 +257,10 @@
   }
   .hero.is-day::before {
     background:
-      linear-gradient(180deg, rgba(250,252,255,0.06) 0%, rgba(246,250,255,0.16) 24%, rgba(242,247,250,0.50) 72%, rgba(238,245,248,0.82) 100%),
-      linear-gradient(115deg, rgba(181,255,90,0.12) 0%, transparent 28%),
-      linear-gradient(300deg, rgba(77,234,255,0.12) 0%, transparent 32%),
-      radial-gradient(circle at 18% 20%, rgba(255,255,255,0.14), transparent 20%);
+      linear-gradient(180deg, rgba(250,252,255,0.12) 0%, rgba(246,250,255,0.24) 24%, rgba(241,246,249,0.62) 72%, rgba(236,242,245,0.90) 100%),
+      linear-gradient(115deg, rgba(181,255,90,0.10) 0%, transparent 28%),
+      linear-gradient(300deg, rgba(77,234,255,0.10) 0%, transparent 32%),
+      radial-gradient(circle at 18% 20%, rgba(255,255,255,0.18), transparent 20%);
   }
   .hero.is-day::after { border-color: rgba(255,255,255,0.44); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.24); }
   .hero::before {
@@ -299,7 +299,7 @@
     transform: scale(1.02);
     object-position: center center;
   }
-  .hero.is-day .hero-video-base { filter: saturate(1.06) contrast(1.08) brightness(0.98); transform: scale(1.01); object-position: center 28%; }
+  .hero.is-day .hero-video-base { filter: saturate(1.04) contrast(1.06) brightness(0.9); transform: scale(1.01); object-position: center 28%; }
   .hero-video-fireworks {
     filter: saturate(1.28) contrast(1.14) brightness(0.92) hue-rotate(-8deg);
     transform: scale(1.05);
@@ -334,6 +334,18 @@
   .hero-content {
     position: relative;
     max-width: 760px;
+  }
+  .hero.is-day .hero-content::before {
+    content: "";
+    position: absolute;
+    inset: -18px -18px -18px -16px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.70) 100%);
+    border: 1px solid rgba(7,16,8,0.06);
+    box-shadow: 0 22px 48px rgba(18,24,18,0.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: -1;
   }
   .hero-kicker {
     display: inline-flex;
@@ -390,15 +402,15 @@
   .hero.is-day .hero-panel,
   .hero.is-day .hero-marquee,
   .hero.is-day .hero-spotify-badge {
-    background: rgba(255,255,255,0.56);
-    border-color: rgba(7,16,8,0.08);
-    box-shadow: 0 18px 40px rgba(16,24,18,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.82);
+    border-color: rgba(7,16,8,0.10);
+    box-shadow: 0 18px 40px rgba(16,24,18,0.10), inset 0 1px 0 rgba(255,255,255,0.62);
     color: #071008;
   }
   .hero.is-day .hero-title,
   .hero.is-day .hero-proof-value,
   .hero.is-day .hero-panel-value { color: #071008; text-shadow: 0 8px 24px rgba(255,255,255,0.32); }
-  .hero.is-day .hero-title .accent { color: #4f8d00; -webkit-text-fill-color: #4f8d00; text-shadow: none; }
+  .hero.is-day .hero-title .accent { color: #386d00; -webkit-text-fill-color: #386d00; text-shadow: none; }
   .hero.is-day .hero-sub,
   .hero.is-day .hero-proof-meta,
   .hero.is-day .hero-panel-copy,
@@ -407,10 +419,18 @@
   .hero.is-day .hero-marquee-track,
   .hero.is-day .hero-kicker,
   .hero.is-day .hero-button-secondary,
-  .hero.is-day .hero-spotify-badge { color: rgba(7,16,8,0.72); text-shadow: none; }
-  .hero.is-day .hero-panel-metric { background: rgba(7,16,8,0.04); border-color: rgba(7,16,8,0.06); }
-  .hero.is-day .hero-panel-metric-label { color: rgba(7,16,8,0.48); }
-  .hero.is-day .hero-panel-metric-value { color: #4f8d00; }
+  .hero.is-day .hero-spotify-badge { color: rgba(7,16,8,0.88); text-shadow: none; }
+  .hero.is-day .hero-button-kicker,
+  .hero.is-day .hero-panel-label,
+  .hero.is-day .hero-proof-label,
+  .hero.is-day .hero-marquee-track,
+  .hero.is-day .hero-kicker { color: rgba(7,16,8,0.58); }
+  .hero.is-day .hero-sub,
+  .hero.is-day .hero-panel-copy,
+  .hero.is-day .hero-proof-meta { color: rgba(7,16,8,0.90); }
+  .hero.is-day .hero-panel-metric { background: rgba(7,16,8,0.06); border-color: rgba(7,16,8,0.08); }
+  .hero.is-day .hero-panel-metric-label { color: rgba(7,16,8,0.58); }
+  .hero.is-day .hero-panel-metric-value { color: #386d00; }
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
@@ -812,6 +832,7 @@
     .hero { min-height: auto; border-radius: 22px; }
     .hero::after { inset: 10px; border-radius: 16px; }
     .hero-grid { padding: 56px 16px 16px; gap: 12px; }
+    .hero.is-day .hero-content::before { inset: -10px -10px -10px -10px; border-radius: 22px; background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(255,255,255,0.78) 100%); }
     .hero-content { max-width: 100%; }
     .hero-kicker { margin-bottom: 12px; font-size: 9px; padding: 7px 11px; }
     .hero-title { font-size: clamp(26px, 11.5vw, 40px); max-width: 7ch; }
