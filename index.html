@@ -2406,7 +2406,7 @@ function AddShowModal({ onClose, onSave }) {
       h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 20 } }, 'Add show'),
       h('label', { className: 'field' },
         h('span', { className: 'field-label' }, 'Date'),
-        h('input', { type: 'date', value: date, onChange: (e) => setDate(e.target.value) })
+        h('input', { type: 'date', value: date, onChange: (e) => setDate(e.target.value), style: { color: '#0F0F0F', WebkitTextFillColor: '#0F0F0F', colorScheme: 'light' } })
       ),
       h('label', { className: 'field' },
         h('span', { className: 'field-label' }, 'DJ / artist *'),
@@ -3577,7 +3577,7 @@ function EditShowModal({ show, onClose, onSave }) {
       h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 20 } }, show.artist),
       h('label', { className: 'field' },
         h('span', { className: 'field-label' }, 'Date'),
-        h('input', { type: 'date', value: date, onChange: e => setDate(e.target.value) })
+        h('input', { type: 'date', value: date, onChange: e => setDate(e.target.value), style: { color: '#0F0F0F', WebkitTextFillColor: '#0F0F0F', colorScheme: 'light' } })
       ),
       h('label', { className: 'field' },
         h('span', { className: 'field-label' }, 'DJ / artist *'),
