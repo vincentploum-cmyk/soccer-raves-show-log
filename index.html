@@ -2487,6 +2487,7 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null); // { done, total, label }
   const [error, setError] = useState(null);
+  const [result, setResult] = useState(null); // { showsAdded:[], ticketsAdded, friendsAdded:[], ticketsSkipped, showsSkipped }
 
   const fetchFromUrl = async () => {
     setError(null);
@@ -2648,7 +2649,14 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
         }
       }
       const showsSkipped = parsed.rows.length - toInsert.length;
-      onComplete({ showsAdded: inserted.length, ticketsAdded: ticketRows.length, friendsAdded: newFriendNames.length, ticketsSkipped, showsSkipped });
+      setResult({
+        showsAdded: inserted.map(s => ({ id: s.id, date: s.date, artist: s.artist, venue: s.venue })),
+        existingShowsReused: parsed.existingShowCount || 0,
+        ticketsAdded: ticketRows.length,
+        ticketsSkipped,
+        showsSkipped,
+        friendsAdded: newFriendNames,
+      });
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -2657,9 +2665,69 @@ function ImportModal({ friends, shows, tickets, currentUser, onClose, onComplete
     }
   };
 
+  const finishAndClose = () => {
+    if (result) {
+      onComplete({
+        showsAdded: result.showsAdded.length,
+        ticketsAdded: result.ticketsAdded,
+        friendsAdded: result.friendsAdded.length,
+        ticketsSkipped: result.ticketsSkipped,
+        showsSkipped: result.showsSkipped,
+      });
+    } else {
+      onClose();
+    }
+  };
+
   const ticketsTotal = parsed ? parsed.rows.reduce((a, r) => a + r.tickets.length, 0) : 0;
   const matchedFriendCount = parsed ? parsed.columnMap.filter(c => c.friendId).length : 0;
 
+  if (result) {
+    const fmt = (d) => formatDate(d);
+    return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget) finishAndClose(); } },
+      h('div', { className: 'modal', style: { maxWidth: 560 } },
+        h('p', { className: 'modal-sub' }, 'import complete'),
+        h('h2', { className: 'modal-title', style: { marginTop: 4, marginBottom: 16, color: '#0F0F0F' } }, '✓ Imported successfully'),
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 } },
+          h('div', { style: { padding: '12px 10px', background: '#B5FF5A', borderRadius: 12, textAlign: 'center', color: '#0F0F0F' } },
+            h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: 28, lineHeight: 1 } }, result.showsAdded.length),
+            h('div', { style: { fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 4 } }, result.showsAdded.length === 1 ? 'show' : 'shows'),
+          ),
+          h('div', { style: { padding: '12px 10px', background: 'rgba(0,0,0,0.06)', borderRadius: 12, textAlign: 'center', color: '#0F0F0F' } },
+            h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: 28, lineHeight: 1 } }, result.ticketsAdded),
+            h('div', { style: { fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 4 } }, result.ticketsAdded === 1 ? 'ticket' : 'tickets'),
+          ),
+          h('div', { style: { padding: '12px 10px', background: 'rgba(0,0,0,0.06)', borderRadius: 12, textAlign: 'center', color: '#0F0F0F' } },
+            h('div', { style: { fontFamily: 'Bricolage Grotesque, sans-serif', fontWeight: 800, fontSize: 28, lineHeight: 1 } }, result.friendsAdded.length),
+            h('div', { style: { fontSize: 10, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 4 } }, result.friendsAdded.length === 1 ? 'friend' : 'friends'),
+          ),
+        ),
+        (result.ticketsSkipped > 0 || result.existingShowsReused > 0) && h('p', { style: { fontSize: 12, color: '#666', marginBottom: 12 } },
+          result.existingShowsReused > 0 ? `${result.existingShowsReused} existing show${result.existingShowsReused === 1 ? '' : 's'} reused` : null,
+          result.existingShowsReused > 0 && result.ticketsSkipped > 0 ? ' · ' : null,
+          result.ticketsSkipped > 0 ? `${result.ticketsSkipped} duplicate ticket${result.ticketsSkipped === 1 ? '' : 's'} skipped` : null,
+        ),
+        result.showsAdded.length > 0 && h('div', { style: { marginBottom: 12 } },
+          h('div', { style: { fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#666', marginBottom: 8 } }, 'New shows'),
+          h('div', { style: { maxHeight: 240, overflowY: 'auto', border: '1px solid rgba(0,0,0,0.10)', borderRadius: 12 } },
+            result.showsAdded.map(s => h('div', { key: s.id, style: { padding: '10px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', fontSize: 13, color: '#0F0F0F', display: 'flex', gap: 10 } },
+              h('span', { style: { fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#5a8d10', minWidth: 78, textTransform: 'uppercase', letterSpacing: '0.08em' } }, fmt(s.date)),
+              h('span', { style: { flex: 1 } },
+                h('span', { style: { fontWeight: 600 } }, s.artist),
+                s.venue && h('span', { style: { color: '#666', fontSize: 12 } }, ' · ' + s.venue),
+              ),
+            )),
+          ),
+        ),
+        result.friendsAdded.length > 0 && h('p', { style: { fontSize: 12, color: '#0F0F0F', marginBottom: 12 } },
+          h('span', { style: { fontWeight: 600 } }, 'New friends: '), result.friendsAdded.join(', ')
+        ),
+        h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 8 } },
+          h('button', { className: 'primary-btn', onClick: finishAndClose }, 'Done'),
+        ),
+      )
+    );
+  }
   return h('div', { className: 'modal-overlay', onClick: (e) => { if (e.target === e.currentTarget && !busy) onClose(); } },
     h('div', { className: 'modal', style: { maxWidth: 560 } },
       h('p', { className: 'modal-sub' }, 'bulk import'),
